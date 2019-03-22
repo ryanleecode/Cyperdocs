@@ -1,0 +1,43 @@
+{
+  "name": "nucypher-hackathon",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@craco/craco": "^3.6.0",
+    "@types/react-dom": "^16.8.2",
+    "autobind-decorator": "^2.4.0",
+    "automerge": "^0.10.0",
+    "automerge-ts": "^0.10.0",
+    "immutable": "^3.8.2",
+    "peerjs": "^0.3.24",
+    "react": "^16.8.4",
+    "react-dom": "^16.8.4",
+    "react-scripts": "2.1.8",
+    "slate": "^0.44.12",
+    "slate-automerge": "^1.0.1",
+    "slate-react": "^0.21.18"
+  },
+  "scripts": {
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ],
+  "devDependencies": {
+    "@types/react": "^16.8.8",
+    "@types/slate": "^0.44.0",
+    "@types/slate-plain-serializer": "^0.6.1",
+    "@types/slate-react": "^0.21.1",
+    "prettier": "^1.16.4",
+    "typescript": "^3.3.3333"
+  }
+}

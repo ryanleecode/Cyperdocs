@@ -1,0 +1,28 @@
+{
+    "name": "server",
+    "version": "1.0.0",
+    "private": true,
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "nodemon"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@types/express": "^4.16.1",
+        "@types/node": "^11.11.3",
+        "nodemon": "^1.18.10",
+        "prettier": "^1.16.4",
+        "ts-node": "^8.0.3",
+        "tslint": "^5.14.0",
+        "typescript": "^3.3.3333"
+    },
+    "dependencies": {
+        "@types/debug": "^4.1.2",
+        "debug": "^4.1.1",
+        "express": "^4.16.4",
+        "peer": "^0.2.10"
+    }
+}
