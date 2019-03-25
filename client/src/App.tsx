@@ -19,7 +19,7 @@ const initialValue = Value.fromJSON(initialValueJSON as any);
 let dumb = automerge.init();
 const initialSlateValue = initialValue;
 dumb = automerge.change(dumb, 'Initialize Slate state', (doc: any) => {
-    doc.note = slateCustomToJson(initialSlateValue.document);
+  doc.note = slateCustomToJson(initialSlateValue.document);
 });
 
 interface InitialConnectionMessage {
@@ -69,7 +69,6 @@ class App extends Component<{}, AppState> {
   }
 
   public componentDidMount(): void {
-
     this.self = new Peer({
       secure: true,
       host: 'df806975.ngrok.io',
@@ -84,7 +83,7 @@ class App extends Component<{}, AppState> {
       const initialDoc = automerge.change(
         dsadad,
         'Initialize Slate state',
-        (doc: { value: any; }) => {
+        (doc: { value: any }) => {
           const { value } = this.state;
           console.log('slate to json', slateCustomToJson(value.document));
           doc.value = slateCustomToJson(value.document);
@@ -95,7 +94,7 @@ class App extends Component<{}, AppState> {
     this.self.on('connection', (conn) => {
       conn.on(
         'data',
-        (
+        async (
           data: InitialConnectionMessage | ChangeMessage | InitialStateMessage,
         ) => {
           const { peerID } = this.state;
@@ -103,7 +102,8 @@ class App extends Component<{}, AppState> {
             case 'INITIAL_CONNECTION_MESSAGE': {
               const { peers } = this.state;
               if (!peers.has(data.peerID)) {
-                this.connectToPeer(data.peerID);
+                await this.connectToPeer(data.peerID);
+                this.sendInitialState(data.peerID);
               }
               break;
             }
@@ -113,6 +113,13 @@ class App extends Component<{}, AppState> {
 
               this.docSet.setDoc(peerID, newDoc);
 
+              const updatedSlate = Value.fromJSON(automergeJsonToSlate({
+                'document': { ...newDoc.value },
+              })!!);
+              console.log(updatedSlate);
+              this.setState({
+                value: updatedSlate,
+              });
               break;
             }
             case 'CHANGE': {
@@ -211,18 +218,20 @@ class App extends Component<{}, AppState> {
   }
 
   @boundMethod
-  private connectToPeer(connectingPeerID: string): void {
-    const connection = this.self.connect(connectingPeerID);
-    connection.on('open', () => {
-      const { peers, peerID } = this.state;
+  private connectToPeer(connectingPeerID: string): Promise<void> {
+    return new Promise<void>((res) => {
+      const connection = this.self.connect(connectingPeerID);
+      connection.on('open', () => {
+        const { peers, peerID } = this.state;
 
-      this.setState({ peers: peers.set(connectingPeerID, connection) });
-      const initialConnectionMsg: InitialConnectionMessage = {
-        type: 'INITIAL_CONNECTION_MESSAGE',
-        peerID,
-      };
-      connection.send(initialConnectionMsg);
-      this.sendInitialState(connectingPeerID);
+        this.setState({ peers: peers.set(connectingPeerID, connection) });
+        const initialConnectionMsg: InitialConnectionMessage = {
+          type: 'INITIAL_CONNECTION_MESSAGE',
+          peerID,
+        };
+        connection.send(initialConnectionMsg);
+        res();
+      });
     });
   }
 
