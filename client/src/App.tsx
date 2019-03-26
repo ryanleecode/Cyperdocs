@@ -71,7 +71,7 @@ class App extends Component<{}, AppState> {
   public componentDidMount(): void {
     this.self = new Peer({
       secure: true,
-      host: 'df806975.ngrok.io',
+      host: process.env.REACT_APP_PEER_SERVER_HOST,
       port: 443,
       path: '/swag',
     });
@@ -79,9 +79,8 @@ class App extends Component<{}, AppState> {
       console.log(peerID);
       this.setState({ peerID });
 
-      const dsadad = automerge.init();
       const initialDoc = automerge.change(
-        dsadad,
+        automerge.init(),
         'Initialize Slate state',
         (doc: { value: any }) => {
           const { value } = this.state;
@@ -113,9 +112,11 @@ class App extends Component<{}, AppState> {
 
               this.docSet.setDoc(peerID, newDoc);
 
-              const updatedSlate = Value.fromJSON(automergeJsonToSlate({
-                'document': { ...newDoc.value },
-              })!!);
+              const updatedSlate = Value.fromJSON(
+                automergeJsonToSlate({
+                  document: { ...newDoc.value },
+                })!!,
+              );
               console.log(updatedSlate);
               this.setState({
                 value: updatedSlate,
