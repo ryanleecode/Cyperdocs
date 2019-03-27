@@ -1,3 +1,4 @@
+import classnames from 'classnames';
 import Immutable from 'immutable';
 import React from 'react';
 import { Card } from 'react-bootstrap';
@@ -21,12 +22,16 @@ export interface EditorProps extends WithSheet<typeof styles> {
     value: Value;
   }) => any;
   applyInset?: boolean;
+  className?: string;
 }
 
 const Editor = (props: EditorProps) => {
-  const { value, onChange, classes, applyInset } = props;
+  const { value, onChange, classes, applyInset, className } = props;
+
+  const insetClassName = applyInset ? classes.inset : undefined;
+  const editorClassName = classnames(className, insetClassName);
   return (
-    <Card className={applyInset ? classes.inset : undefined}>
+    <Card className={editorClassName}>
       <Card.Body>
         <SlateEditor value={value} onChange={onChange} />
       </Card.Body>

@@ -22,6 +22,9 @@ const styles = (theTheme: typeof Theme) => ({
     backgroundColor: theTheme.backgroundColor,
     height: '100%',
   },
+  editor: {
+    height: '100%',
+  },
 });
 
 const initialValue = Value.fromJSON(initialValueJSON as any);
@@ -182,6 +185,7 @@ class HomePage extends Component<HomePageProps, AppState> {
           Call
         </button>
         <Editor
+          className={classes.editor}
           value={this.state.value}
           onChange={({ value, operations }) => {
             return this.onChange({ value, operations });
