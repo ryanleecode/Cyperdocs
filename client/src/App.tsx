@@ -1,8 +1,9 @@
 import { boundMethod } from 'autobind-decorator';
 import automerge from 'automerge';
-import Immutable, { Map, Set } from 'immutable';
+import Immutable, { Map } from 'immutable';
 import Peer from 'peerjs';
 import React, { Component } from 'react';
+import { ThemeProvider } from 'react-jss';
 import { Operation, Value } from 'slate';
 import {
   applyAutomergeOperations,
@@ -13,6 +14,9 @@ import {
 import { Editor } from 'slate-react';
 import './App.css';
 import { initialValue as initialValueJSON } from './initialValue';
+import Navbar from './Navbar';
+
+const theme = {};
 
 const initialValue = Value.fromJSON(initialValueJSON as any);
 
@@ -158,22 +162,25 @@ class App extends Component<{}, AppState> {
   public render(): JSX.Element {
     const { connectingPeerID } = this.state;
     return (
-      <div className="App">
-        <input
-          onChange={(e) => {
-            this.setState({ connectingPeerID: e.target.value });
-          }}
-        />
-        <button onClick={() => this.connectToPeer(connectingPeerID)}>
-          Call
-        </button>
-        <Editor
-          value={this.state.value}
-          onChange={({ value, operations }) => {
-            return this.onChange({ value, operations });
-          }}
-        />
-      </div>
+      <ThemeProvider theme={theme}>
+        <div className="App">
+          <Navbar />
+          <input
+            onChange={(e) => {
+              this.setState({ connectingPeerID: e.target.value });
+            }}
+          />
+          <button onClick={() => this.connectToPeer(connectingPeerID)}>
+            Call
+          </button>
+          <Editor
+            value={this.state.value}
+            onChange={({ value, operations }) => {
+              return this.onChange({ value, operations });
+            }}
+          />
+        </div>
+      </ThemeProvider>
     );
   }
 
