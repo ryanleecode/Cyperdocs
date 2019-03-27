@@ -9,7 +9,6 @@ import {
   NavDropdown as NavBootstrapDropdown,
 } from 'react-bootstrap';
 import withSheet, { WithSheet } from 'react-jss';
-import { RIEToggle } from 'riek';
 import EditableTextField from './EditableTextField';
 
 const styles = (theme: any) => ({
