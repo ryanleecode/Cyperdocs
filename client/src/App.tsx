@@ -1,6 +1,7 @@
 import React from 'react';
 import { ThemeProvider } from 'react-jss';
-import HomePage from './HomePage';
+import { BrowserRouter } from 'react-router-dom';
+import Router from './Router';
 
 export const Theme = {
   foregroundColor: '#FFFFFF',
@@ -8,9 +9,11 @@ export const Theme = {
 };
 
 const App = () => (
-  <ThemeProvider theme={Theme}>
-    <HomePage />
-  </ThemeProvider>
+  <BrowserRouter>
+    <ThemeProvider theme={Theme}>
+      <Router />
+    </ThemeProvider>
+  </BrowserRouter>
 );
 
 export default App;

@@ -2,9 +2,6 @@ import React from 'react';
 import {
   Button,
   ButtonToolbar,
-  Form,
-  FormControl,
-  FormText,
   Nav as NavBootstrap,
   Navbar as NavbarBootstrap,
   NavDropdown as NavBootstrapDropdown,
@@ -70,6 +67,17 @@ class Navbar extends React.Component<Props> {
           </NavBootstrap>
           <ButtonToolbar>
             <Button variant="outline-success">Share</Button>
+            {/*             <Modal show={true} size="sm" centered>
+              <Modal.Header closeButton>
+                <Modal.Title>Share with a peer</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <InputGroup>
+
+                </InputGroup>
+              </Modal.Body>
+              <Modal.Footer>dsadasd</Modal.Footer>
+            </Modal> */}
           </ButtonToolbar>
         </NavbarBootstrap.Collapse>
       </NavbarBootstrap>
