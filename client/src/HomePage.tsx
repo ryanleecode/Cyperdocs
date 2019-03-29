@@ -44,7 +44,7 @@ class HomePage extends React.Component<WithSheet<typeof styles>> {
     return (
       <div>
         <div style={{ position: 'sticky' }}>
-          <Parallax blur={6} bgImage={'/banner.jpg'} strength={100}>
+          <Parallax blur={5} bgImage={'/banner.jpg'} strength={100}>
             <div className={classes.bannerContainer}>
               <div>
                 <h1 className={classes.title}>CypherDocs</h1>
