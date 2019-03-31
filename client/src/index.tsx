@@ -1,8 +1,15 @@
+import BlueBirdPromise from 'bluebird';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
 import './index.scss';
 import * as serviceWorker from './serviceWorker';
+
+global.Promise = BlueBirdPromise;
+BlueBirdPromise.config({
+  longStackTraces: true,
+  warnings: true,
+});
 
 ReactDOM.render(<App />, document.getElementById('root'));
 
