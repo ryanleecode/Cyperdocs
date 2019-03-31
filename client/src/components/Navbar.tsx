@@ -1,3 +1,4 @@
+import EditableTextField from '@/EditableTextField';
 import React from 'react';
 import {
   Button,
@@ -7,7 +8,6 @@ import {
   NavDropdown as NavBootstrapDropdown,
 } from 'react-bootstrap';
 import withSheet, { WithSheet } from 'react-jss';
-import EditableTextField from './EditableTextField';
 
 const styles = (theme: any) => ({
   navbarBootstrapCollapse: {

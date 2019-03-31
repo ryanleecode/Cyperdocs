@@ -1,3 +1,6 @@
+import { Theme } from '@/App';
+import Navbar from '@/components/Navbar';
+import { SwarmClient } from '@erebos/swarm';
 import { boundMethod } from 'autobind-decorator';
 import automerge from 'automerge';
 import Immutable, { Map } from 'immutable';
@@ -11,10 +14,10 @@ import {
   automergeJsonToSlate,
   slateCustomToJson,
 } from 'slate-automerge';
-import { Theme } from './App';
 import Editor from './Editor';
 import { initialValue as initialValueJSON } from './initialValue';
-import Navbar from './Navbar';
+
+const BZZ_URL = 'https://swarm-gateways.net';
 
 const styles = (theme: typeof Theme) => ({
   page: {
@@ -61,7 +64,22 @@ interface Doc {
   value: any;
 }
 
-export interface EditorPageProps extends WithSheet<typeof styles> {}
+const client = new SwarmClient({ http: 'https://swarm-gateways.net' });
+client.bzz
+  .upload('Hello world!', { contentType: 'text/plain' })
+  .then((hash) => {
+    console.log(hash);
+    return client.bzz.download(hash);
+  })
+  .then((res) => res.text())
+  .then((text) => {
+    console.log(text); // "Hello world!"
+  });
+
+export interface EditorPageProps extends WithSheet<typeof styles> {
+  swarmPrivateKey: string;
+  loadDocumentFromSwarm: () => void;
+}
 
 class EditorPage extends Component<EditorPageProps, AppState> {
   public state: AppState;
@@ -84,12 +102,16 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   }
 
   public componentDidMount(): void {
+    const { loadDocumentFromSwarm } = this.props;
+    loadDocumentFromSwarm();
+
     this.self = new Peer({
       secure: true,
       host: process.env.REACT_APP_PEER_SERVER_HOST,
       port: 443,
       path: '/swag',
     });
+
     this.self.on('open', (peerID) => {
       console.log(peerID);
       this.setState({ peerID });

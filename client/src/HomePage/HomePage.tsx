@@ -1,10 +1,10 @@
+import { Theme } from '@/App';
+import { actions as RoleActions } from '@/store/role';
 import React from 'react';
 import { Button } from 'react-bootstrap';
 import injectSheet, { WithSheet } from 'react-jss';
-import { Background, Parallax } from 'react-parallax';
+import { Parallax } from 'react-parallax';
 import { Link } from 'react-router-dom';
-import { Sticky, StickyContainer } from 'react-sticky';
-import { Theme } from './App';
 
 const styles = (theme: typeof Theme) => ({
   banner: {
@@ -37,9 +37,13 @@ const styles = (theme: typeof Theme) => ({
   },
 });
 
-class HomePage extends React.Component<WithSheet<typeof styles>> {
+interface Props extends WithSheet<typeof styles> {
+  setRole: typeof RoleActions.setRole;
+}
+
+class HomePage extends React.Component<Props> {
   public render(): JSX.Element {
-    const { classes } = this.props;
+    const { classes, setRole } = this.props;
 
     return (
       <div>
@@ -52,13 +56,21 @@ class HomePage extends React.Component<WithSheet<typeof styles>> {
                   The trustless peer to peer document collaboration tool
                 </h4>
                 <div className={classes.buttonContainer}>
-                  <Link to="/alice">
-                    <Button size="lg" variant="outline-info">
-                      Try Now as Alice
+                  <Link to="/alice-enrico">
+                    <Button
+                      size="lg"
+                      variant="outline-info"
+                      onClick={() => setRole('Alice')}
+                    >
+                      Try Now as Alice/Enrico
                     </Button>
                   </Link>
 
-                  <Button size="lg" variant="outline-info">
+                  <Button
+                    size="lg"
+                    variant="outline-info"
+                    onClick={() => setRole('Bob')}
+                  >
                     Try Now as Bob
                   </Button>
                 </div>

@@ -1,3 +1,4 @@
+import { Theme } from '@/App';
 import classnames from 'classnames';
 import Immutable from 'immutable';
 import React from 'react';
@@ -5,7 +6,6 @@ import { Card } from 'react-bootstrap';
 import withSheet, { WithSheet } from 'react-jss';
 import { Operation, Value } from 'slate';
 import { Editor as SlateEditor } from 'slate-react';
-import { Theme } from './App';
 
 const styles = (theme: typeof Theme) => ({
   inset: {
