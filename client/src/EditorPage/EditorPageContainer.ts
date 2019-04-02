@@ -9,6 +9,8 @@ const mapStateToProps = (state: AppState) => ({
 
 const mapDispatchToProps = {
   loadDocumentFromSwarm: DocumentActions.loadDocumentFromSwarm,
+  setDocumentID: DocumentActions.setDocumentID,
+  fillDocumentWithDefaultData: DocumentActions.fillDocumentWithDefaultData,
 };
 
 export default connect(

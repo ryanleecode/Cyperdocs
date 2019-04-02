@@ -8,7 +8,7 @@ import * as serviceWorker from './serviceWorker';
 global.Promise = BlueBirdPromise;
 BlueBirdPromise.config({
   longStackTraces: true,
-  warnings: true,
+  warnings: false,
 });
 
 ReactDOM.render(<App />, document.getElementById('root'));

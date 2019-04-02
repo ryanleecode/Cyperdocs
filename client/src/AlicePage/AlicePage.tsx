@@ -176,12 +176,9 @@ class AlicePage extends React.Component<Props, State> {
                         this.setState({
                           wantsToEditExistingDocument: true,
                           showEnrico: false,
+                        }, () => {
+                          this.setEnricoVisibilityConditionally();
                         });
-                        if (documentIdentifier) {
-                          this.setState({
-                            showEnrico: true,
-                          });
-                        }
                       }}
                       checked={wantsToEditExistingDocument}
                     />
@@ -209,6 +206,7 @@ class AlicePage extends React.Component<Props, State> {
                         value={documentIdentifier}
                         onChange={(value: OnChangeEvent) => {
                           setDocumentID(value.currentTarget.value || '');
+                          this.setEnricoVisibilityConditionally();
                         }}
                       />
                       <Form.Control
@@ -219,6 +217,7 @@ class AlicePage extends React.Component<Props, State> {
                         value={swarmPrivateKey}
                         onChange={(value: OnChangeEvent) => {
                           setSwarmPrivateKey(value.currentTarget.value || '');
+                          this.setEnricoVisibilityConditionally();
                         }}
                       />
                     </React.Fragment>
@@ -347,6 +346,7 @@ class AlicePage extends React.Component<Props, State> {
       'post',
       'Alice',
     );
+    this.setEnricoVisibilityConditionally();
   }
 
   @autobind

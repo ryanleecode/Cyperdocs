@@ -2,6 +2,7 @@ import React from 'react';
 import { ThemeProvider } from 'react-jss';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
+import { PersistGate } from 'redux-persist/integration/react';
 import Router from './Router';
 import { configureStore } from './store.config';
 
@@ -10,15 +11,17 @@ export const Theme = {
   backgroundColor: '#F2F2F2',
 };
 
-const store = configureStore();
+const { store, persistor } = configureStore();
 
 const App = () => (
   <Provider store={store}>
-    <BrowserRouter>
-      <ThemeProvider theme={Theme}>
-        <Router />
-      </ThemeProvider>
-    </BrowserRouter>
+    <PersistGate loading={null} persistor={persistor}>
+      <BrowserRouter>
+        <ThemeProvider theme={Theme}>
+          <Router />
+        </ThemeProvider>
+      </BrowserRouter>
+    </PersistGate>
   </Provider>
 );
 

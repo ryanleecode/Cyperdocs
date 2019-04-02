@@ -7,7 +7,9 @@ import Immutable, { Map } from 'immutable';
 import Peer from 'peerjs';
 import React, { Component } from 'react';
 import injectSheet, { WithSheet } from 'react-jss';
+import { RouteComponentProps } from 'react-router';
 import { Operation, Value } from 'slate';
+import { Document } from 'slate';
 import {
   applyAutomergeOperations,
   applySlateOperations,
@@ -64,21 +66,13 @@ interface Doc {
   value: any;
 }
 
-const client = new SwarmClient({ http: 'https://swarm-gateways.net' });
-client.bzz
-  .upload('Hello world!', { contentType: 'text/plain' })
-  .then((hash) => {
-    console.log(hash);
-    return client.bzz.download(hash);
-  })
-  .then((res) => res.text())
-  .then((text) => {
-    console.log(text); // "Hello world!"
-  });
-
-export interface EditorPageProps extends WithSheet<typeof styles> {
+export interface EditorPageProps
+  extends WithSheet<typeof styles>,
+    RouteComponentProps {
   swarmPrivateKey: string;
+  setDocumentID: (documentID: string) => void;
   loadDocumentFromSwarm: () => void;
+  fillDocumentWithDefaultData: (data: Document) => void;
 }
 
 class EditorPage extends Component<EditorPageProps, AppState> {
@@ -102,7 +96,17 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   }
 
   public componentDidMount(): void {
-    const { loadDocumentFromSwarm } = this.props;
+    const {
+      loadDocumentFromSwarm,
+      fillDocumentWithDefaultData,
+      setDocumentID,
+    } = this.props;
+
+    const documentID = this.props.history.location.pathname.match(
+      /[^/]*$/g,
+    )!![0];
+
+    setDocumentID(documentID);
     loadDocumentFromSwarm();
 
     this.self = new Peer({
@@ -116,6 +120,8 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       console.log(peerID);
       this.setState({ peerID });
 
+      const { value } = this.state;
+      fillDocumentWithDefaultData(value.document);
       const initialDoc = automerge.change(
         automerge.init(),
         'Initialize Slate state',
