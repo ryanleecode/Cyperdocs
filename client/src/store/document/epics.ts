@@ -150,7 +150,7 @@ const logRetrievalCountEpic = (
   );
 
 const MAX_DOCUMENT_FETCH_ATTEMPTS = 5;
-const REQUIRED_NUMBER_OF_FETCHES = 5;
+const REQUIRED_NUMBER_OF_FETCHES = 3;
 
 const fetchDocumentEpic = (
   action$: ActionsObservable<fromActions.Actions>,
@@ -236,7 +236,6 @@ const consumeFetchedDocumentEpic = (
                 policy_encrypting_key: alicePolicyEncryptingKey,
               },
             }) => {
-              console.log(encryptedData);
               return http.post<BobRetrieve>(`${fakeBobBaseURL}/retrieve`, {
                 label: documentID,
                 policy_encrypting_key: alicePolicyEncryptingKey,
@@ -249,7 +248,6 @@ const consumeFetchedDocumentEpic = (
     }),
     map((bobRetrieve) => bobRetrieve.result.cleartexts[0]),
     map((clearText) => {
-      console.log(clearText);
       const doc = JSON.parse(clearText);
       const newDoc = automerge.applyChanges(automerge.init(), doc);
 

@@ -8,6 +8,7 @@ const mapStateToProps = (state: AppState) => ({
   data: state.document.data,
   slateRepr: state.document.slateRepr,
   peerID: state.document.peerID,
+  isLoading: state.document.isLoading,
 });
 
 const mapDispatchToProps = {

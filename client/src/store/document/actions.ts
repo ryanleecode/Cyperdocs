@@ -83,7 +83,6 @@ export const Actions = {
   ) => createAction(SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER, payload),
   previousActionCompleted: () => createAction(PREVIOUS_ACTION_COMPLETED),
   logRetrievalCount: (hash: string) => createAction(LOG_RETRIEVAL_COUNT, hash),
-  derp: () => createAction('derp'),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;

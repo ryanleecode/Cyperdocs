@@ -8,7 +8,6 @@ import {
   InitialConnectionMessage,
   InitialStateMessage,
 } from '@/store/document/connection-protocol';
-import { SwarmClient } from '@erebos/swarm';
 import { boundMethod } from 'autobind-decorator';
 import automerge from 'automerge';
 import { Doc as AutomergeDocument } from 'automerge';
@@ -18,17 +17,13 @@ import React, { Component } from 'react';
 import injectSheet, { WithSheet } from 'react-jss';
 import { RouteComponentProps } from 'react-router';
 import { Operation, Value } from 'slate';
-import { Document } from 'slate';
 import {
   applyAutomergeOperations,
-  applySlateOperations,
   automergeJsonToSlate,
   slateCustomToJson,
 } from 'slate-automerge';
 import Editor from './Editor';
 import { initialValue as initialValueJSON } from './initialValue';
-
-const BZZ_URL = 'https://swarm-gateways.net';
 
 const styles = (theme: typeof Theme) => ({
   page: {
@@ -69,6 +64,7 @@ export interface EditorPageProps
   swarmPrivateKey: string;
   data: AutomergeDocument;
   slateRepr: Value;
+  isLoading: boolean;
   peerID: string;
   setDocumentID: (documentID: string) => void;
   loadDocumentFromSwarm: () => void;
@@ -146,7 +142,6 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             }
             case 'INITIAL_STATE_MESSAGE': {
               const doc = JSON.parse(data.initialState);
-              console.log(data.initialState);
               const newDoc = automerge.applyChanges(automerge.init(), doc);
               setDocumentData(newDoc);
               break;
@@ -187,7 +182,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
 
   public render(): JSX.Element {
     const { connectingPeerID } = this.state;
-    const { classes, slateRepr } = this.props;
+    const { classes, slateRepr, isLoading } = this.props;
     return (
       <div className={classes.page}>
         <Navbar />
@@ -200,6 +195,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
           Call
         </button>
         <Editor
+          isLoading={isLoading}
           className={classes.editor}
           value={slateRepr}
           onChange={({ value, operations }) => {

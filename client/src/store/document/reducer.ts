@@ -15,6 +15,7 @@ export const initialState = {
   data: automerge.init(),
   peerID: '',
   retrievalCounts: Map<string, number>(),
+  isLoading: false,
 };
 export type State = typeof initialState;
 
@@ -54,10 +55,10 @@ export const reducer = (
       return { ...state, retrievalCounts: newRetrievalCounts };
     }
     case fromActions.CONSUME_FETCHED_DOCUMENT: {
-      return { ...state, retrievalCounts: Map() };
+      return { ...state, retrievalCounts: Map(), isLoading: false };
     }
     case fromActions.LOAD_DOCUMENT_FROM_SWARM: {
-      return { ...state, retrievalCounts: Map() };
+      return { ...state, retrievalCounts: Map(), isLoading: true };
     }
     case fromActions.SET_SLATE_REPR: {
       return { ...state, slateRepr: action.payload };

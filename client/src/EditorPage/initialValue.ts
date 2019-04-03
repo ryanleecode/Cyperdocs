@@ -9,39 +9,7 @@ export const initialValue = {
             object: 'text',
             leaves: [
               {
-                text: 'Ruin and Grief.',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        object: 'block',
-        type: 'ul_list',
-        data: {
-          style: {
-            listStyleType: 'disc',
-          },
-        },
-        nodes: [
-          {
-            object: 'block',
-            type: 'list_item',
-            nodes: [
-              {
-                object: 'block',
-                type: 'paragraph',
-                nodes: [
-                  {
-                    object: 'text',
-                    leaves: [
-                      {
-                        text:
-                          'This is node in a list. Hit [ENTER] and then hit [TAB]',
-                      },
-                    ],
-                  },
-                ],
+                text: 'Your document is loading please wait!',
               },
             ],
           },
