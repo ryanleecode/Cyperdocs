@@ -24,6 +24,7 @@ import {
 } from 'rxjs/operators';
 
 import { AppState } from '@/store';
+import crypto from 'crypto';
 import moment from 'moment';
 import nanoid from 'nanoid';
 import {
@@ -136,7 +137,17 @@ const startLoadingDocumentFromSwarmEpic = (
     map(() => fromActions.Actions.tryFetchDocumentFromSwarm(0)),
   );
 
+const logRetrievalCountEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.LOG_RETRIEVAL_COUNT),
+    map(() => fromActions.Actions.tryFetchDocumentFromSwarm(0)),
+  );
+
 const MAX_DOCUMENT_FETCH_ATTEMPTS = 5;
+const REQUIRED_NUMBER_OF_FETCHES = 5;
 
 const fetchDocumentEpic = (
   action$: ActionsObservable<fromActions.Actions>,
@@ -146,13 +157,21 @@ const fetchDocumentEpic = (
     ofType(fromActions.TRY_FETCH_DOCUMENT_FROM_SWARM),
     flatMap((action) => {
       const {
-        document: { documentID },
+        document: { documentID, retrievalCounts },
       } = state$.value;
 
       return http.get<EncryptedData>(`${BZZ_URL}/bzz:/${documentID}`).pipe(
-        map((encryptedData) =>
-          fromActions.Actions.consumeFetchedDocument(encryptedData),
-        ),
+        map((encryptedData) => {
+          const hash = crypto
+            .createHash('sha256')
+            .update(JSON.stringify(encryptedData))
+            .digest('base64');
+          if (retrievalCounts.get(hash, 0) >= REQUIRED_NUMBER_OF_FETCHES) {
+            return fromActions.Actions.consumeFetchedDocument(encryptedData);
+          } else {
+            return fromActions.Actions.logRetrievalCount(hash);
+          }
+        }),
         catchError((error) => {
           if (!documentID) {
             return of(fromActions.Actions.createNewDocument());
@@ -272,4 +291,5 @@ export const epic = combineEpics(
   consumeFetchedDocumentEpic,
   startPeerConnectionEpic,
   sendInitialDataToPeerEpic,
+  logRetrievalCountEpic,
 );

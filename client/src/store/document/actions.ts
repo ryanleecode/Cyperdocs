@@ -1,6 +1,7 @@
 import { ActionsUnion, createAction } from '@martin_hotell/rex-tils';
 import { Doc } from 'automerge';
 import Immutable from 'immutable';
+import Peer from 'peerjs';
 import { Document, Value } from 'slate';
 import { Operation } from 'slate';
 
@@ -26,7 +27,7 @@ export const SEND_PEER_ID_TO_CONNECTING_PEER =
 export const PREVIOUS_ACTION_COMPLETED = 'PREVIOUS_ACTION_COMPLETED';
 export const SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER =
   'SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER';
-import Peer from 'peerjs';
+export const LOG_RETRIEVAL_COUNT = 'LOG_RETRIEVAL_COUNT';
 
 export interface EncryptedData {
   result: {
@@ -81,6 +82,7 @@ export const Actions = {
     payload: SendInitialDocumentStateToIncomingPeerPayload,
   ) => createAction(SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER, payload),
   previousActionCompleted: () => createAction(PREVIOUS_ACTION_COMPLETED),
+  logRetrievalCount: (hash: string) => createAction(LOG_RETRIEVAL_COUNT, hash),
   derp: () => createAction('derp'),
   yolo: () => createAction('yolo'),
 };

@@ -1,5 +1,5 @@
 import automerge from 'automerge';
-import produce from 'immer';
+import { Map } from 'immutable';
 import { Value } from 'slate';
 import { applySlateOperations, slateCustomToJson } from 'slate-automerge';
 import * as fromActions from './actions';
@@ -14,6 +14,7 @@ export const initialState = {
   slateRepr: Value.fromJSON({}),
   data: automerge.init(),
   peerID: '',
+  retrievalCounts: Map<string, number>(),
 };
 export type State = typeof initialState;
 
@@ -41,6 +42,22 @@ export const reducer = (
       const newDoc = throwawayDocSet.getDoc(throwawayID)!!;
 
       return { ...state, data: newDoc };
+    }
+    case fromActions.LOG_RETRIEVAL_COUNT: {
+      const currentRetrievalCounts = state.retrievalCounts;
+      const hash = action.payload;
+      const newRetrievalCounts = currentRetrievalCounts.set(
+        hash,
+        currentRetrievalCounts.get(hash, 0) + 1,
+      );
+
+      return { ...state, retrievalCounts: newRetrievalCounts };
+    }
+    case fromActions.CONSUME_FETCHED_DOCUMENT: {
+      return { ...state, retrievalCounts: Map() };
+    }
+    case fromActions.LOAD_DOCUMENT_FROM_SWARM: {
+      return { ...state, retrievalCounts: Map() };
     }
     case fromActions.SET_SLATE_REPR: {
       return { ...state, slateRepr: action.payload };
