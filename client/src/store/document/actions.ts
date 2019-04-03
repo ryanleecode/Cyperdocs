@@ -84,7 +84,6 @@ export const Actions = {
   previousActionCompleted: () => createAction(PREVIOUS_ACTION_COMPLETED),
   logRetrievalCount: (hash: string) => createAction(LOG_RETRIEVAL_COUNT, hash),
   derp: () => createAction('derp'),
-  yolo: () => createAction('yolo'),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;

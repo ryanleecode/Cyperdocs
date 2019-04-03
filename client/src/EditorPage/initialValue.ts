@@ -9,7 +9,7 @@ export const initialValue = {
             object: 'text',
             leaves: [
               {
-                text: 'This is the editor. Type here.',
+                text: 'Ruin and Grief.',
               },
             ],
           },

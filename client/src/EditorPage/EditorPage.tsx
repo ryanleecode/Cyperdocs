@@ -146,13 +146,9 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             }
             case 'INITIAL_STATE_MESSAGE': {
               const doc = JSON.parse(data.initialState);
+              console.log(data.initialState);
               const newDoc = automerge.applyChanges(automerge.init(), doc);
               setDocumentData(newDoc);
-
-              const updatedSlate = Value.fromJSON(
-                automergeJsonToSlate(newDoc.value)!!,
-              );
-              setSlateRepr(updatedSlate);
               break;
             }
             case 'CHANGE': {

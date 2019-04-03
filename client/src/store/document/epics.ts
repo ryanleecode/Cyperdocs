@@ -2,6 +2,7 @@ import { pubKeyToAddress } from '@erebos/keccak256';
 import { createKeyPair, sign } from '@erebos/secp256k1';
 import { BzzAPI } from '@erebos/swarm';
 import { ofType } from '@martin_hotell/rex-tils';
+import automerge from 'automerge';
 import {
   ActionsObservable,
   combineEpics,
@@ -36,6 +37,8 @@ import {
   throwError,
   timer,
 } from 'rxjs';
+import { Value } from 'slate';
+import { automergeJsonToSlate } from 'slate-automerge';
 import * as fromActions from './actions';
 import {
   InitialConnectionMessage,
@@ -247,7 +250,10 @@ const consumeFetchedDocumentEpic = (
     map((bobRetrieve) => bobRetrieve.result.cleartexts[0]),
     map((clearText) => {
       console.log(clearText);
-      return fromActions.Actions.derp();
+      const doc = JSON.parse(clearText);
+      const newDoc = automerge.applyChanges(automerge.init(), doc);
+
+      return fromActions.Actions.setDocumentData(newDoc);
     }),
   );
 
@@ -283,6 +289,19 @@ const sendInitialDataToPeerEpic = (
     map(() => fromActions.Actions.previousActionCompleted()),
   );
 
+const setDocumentDataEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.SET_DOCUMENT_DATA),
+    map(() => {
+      const newDoc = state$.value.document.data;
+      const updatedSlate = Value.fromJSON(automergeJsonToSlate(newDoc.value)!!);
+      return fromActions.Actions.setSlateRepr(updatedSlate);
+    }),
+  );
+
 export const epic = combineEpics(
   setDocumentIDEpic,
   generateSwarmPrivateKey,
@@ -292,4 +311,5 @@ export const epic = combineEpics(
   startPeerConnectionEpic,
   sendInitialDataToPeerEpic,
   logRetrievalCountEpic,
+  setDocumentDataEpic,
 );
