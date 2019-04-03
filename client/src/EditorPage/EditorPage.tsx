@@ -1,8 +1,17 @@
 import { Theme } from '@/App';
 import Navbar from '@/components/Navbar';
+import {
+  SendInitialDocumentStateToIncomingPeerPayload,
+  SendPeerIDToConnectingPeerPayload,
+} from '@/store/document/actions';
+import {
+  InitialConnectionMessage,
+  InitialStateMessage,
+} from '@/store/document/connection-protocol';
 import { SwarmClient } from '@erebos/swarm';
 import { boundMethod } from 'autobind-decorator';
 import automerge from 'automerge';
+import { Doc as AutomergeDocument } from 'automerge';
 import Immutable, { Map } from 'immutable';
 import Peer from 'peerjs';
 import React, { Component } from 'react';
@@ -40,26 +49,14 @@ dumb = automerge.change(dumb, 'Initialize Slate state', (doc: any) => {
   doc.note = slateCustomToJson(initialSlateValue.document);
 });
 
-interface InitialConnectionMessage {
-  type: 'INITIAL_CONNECTION_MESSAGE';
-  peerID: string;
-}
-
-interface InitialStateMessage {
-  type: 'INITIAL_STATE_MESSAGE';
-  initialState: string;
-}
-
 interface ChangeMessage {
   type: 'CHANGE';
   changeData: string;
 }
 
 interface AppState {
-  value: Value;
   peers: Map<string, Peer.DataConnection>;
   connectingPeerID: string;
-  peerID: string;
 }
 
 interface Doc {
@@ -70,9 +67,22 @@ export interface EditorPageProps
   extends WithSheet<typeof styles>,
     RouteComponentProps {
   swarmPrivateKey: string;
+  data: AutomergeDocument;
+  slateRepr: Value;
+  peerID: string;
   setDocumentID: (documentID: string) => void;
   loadDocumentFromSwarm: () => void;
-  fillDocumentWithDefaultData: (data: Document) => void;
+  syncDocumentWithCurrentSlateData: () => void;
+  applyLocalChange: (operations: Immutable.List<Operation>) => void;
+  setSlateRepr: (value: Value) => void;
+  setPeerID: (peerID: string) => void;
+  setDocumentData: (doc: automerge.Doc) => void;
+  sendPeerIDToConnectingPeer: (
+    payload: SendPeerIDToConnectingPeerPayload,
+  ) => void;
+  sendInitialStateToIncomingPeer: (
+    payload: SendInitialDocumentStateToIncomingPeerPayload,
+  ) => void;
 }
 
 class EditorPage extends Component<EditorPageProps, AppState> {
@@ -80,16 +90,10 @@ class EditorPage extends Component<EditorPageProps, AppState> {
 
   private self!: Peer;
 
-  private docSet!: automerge.DocSet;
-
   constructor(props: any) {
     super(props);
 
-    this.docSet = new automerge.DocSet();
-
     this.state = {
-      value: initialValue,
-      peerID: '',
       connectingPeerID: '',
       peers: Map(),
     };
@@ -98,14 +102,18 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   public componentDidMount(): void {
     const {
       loadDocumentFromSwarm,
-      fillDocumentWithDefaultData,
+      syncDocumentWithCurrentSlateData,
       setDocumentID,
+      setSlateRepr,
+      setDocumentData,
     } = this.props;
 
     const documentID = this.props.history.location.pathname.match(
       /[^/]*$/g,
     )!![0];
 
+    setSlateRepr(initialValue);
+    syncDocumentWithCurrentSlateData();
     setDocumentID(documentID);
     loadDocumentFromSwarm();
 
@@ -118,20 +126,8 @@ class EditorPage extends Component<EditorPageProps, AppState> {
 
     this.self.on('open', (peerID) => {
       console.log(peerID);
-      this.setState({ peerID });
-
-      const { value } = this.state;
-      fillDocumentWithDefaultData(value.document);
-      const initialDoc = automerge.change(
-        automerge.init(),
-        'Initialize Slate state',
-        (doc: { value: any }) => {
-          const { value } = this.state;
-          console.log('slate to json', slateCustomToJson(value.document));
-          doc.value = slateCustomToJson(value.document);
-        },
-      );
-      this.docSet.setDoc(peerID, initialDoc);
+      const { setPeerID } = this.props;
+      setPeerID(peerID);
     });
     this.self.on('connection', (conn) => {
       conn.on(
@@ -139,7 +135,6 @@ class EditorPage extends Component<EditorPageProps, AppState> {
         async (
           data: InitialConnectionMessage | ChangeMessage | InitialStateMessage,
         ) => {
-          const { peerID } = this.state;
           switch (data.type) {
             case 'INITIAL_CONNECTION_MESSAGE': {
               const { peers } = this.state;
@@ -152,22 +147,16 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             case 'INITIAL_STATE_MESSAGE': {
               const doc = JSON.parse(data.initialState);
               const newDoc = automerge.applyChanges(automerge.init(), doc);
-
-              this.docSet.setDoc(peerID, newDoc);
+              setDocumentData(newDoc);
 
               const updatedSlate = Value.fromJSON(
-                automergeJsonToSlate({
-                  document: { ...newDoc.value },
-                })!!,
+                automergeJsonToSlate(newDoc.value)!!,
               );
-              console.log(updatedSlate);
-              this.setState({
-                value: updatedSlate,
-              });
+              setSlateRepr(updatedSlate);
               break;
             }
             case 'CHANGE': {
-              const currentDoc = this.docSet.getDoc(peerID);
+              const currentDoc = this.props.data;
 
               const changes = JSON.parse(data.changeData);
 
@@ -175,19 +164,21 @@ class EditorPage extends Component<EditorPageProps, AppState> {
               const opSetDiff = automerge.diff(currentDoc!!, newDoc);
 
               if (opSetDiff.length !== 0) {
-                let change = (this.state.value as any).change();
+                const { slateRepr } = this.props;
+                let change = (slateRepr as any).change();
                 change = applyAutomergeOperations(opSetDiff, change, () => {
-                  const doc = this.docSet.getDoc(this.state.peerID);
+                  const doc = this.props.data;
                   const newJson = automergeJsonToSlate({
                     document: { ...doc!!.value },
                   })!!;
-                  this.setState({ value: Value.fromJSON(newJson) });
+                  setSlateRepr(Value.fromJSON(newJson));
                 });
                 if (change) {
-                  this.setState({ value: change.value });
+                  setSlateRepr(change.value);
                 }
               }
-              this.docSet.setDoc(peerID, newDoc);
+
+              setDocumentData(newDoc);
               break;
             }
             default:
@@ -200,7 +191,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
 
   public render(): JSX.Element {
     const { connectingPeerID } = this.state;
-    const { classes } = this.props;
+    const { classes, slateRepr } = this.props;
     return (
       <div className={classes.page}>
         <Navbar />
@@ -214,7 +205,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
         </button>
         <Editor
           className={classes.editor}
-          value={this.state.value}
+          value={slateRepr}
           onChange={({ value, operations }) => {
             return this.onChange({ value, operations });
           }}
@@ -232,22 +223,21 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     operations: Immutable.List<Operation>;
     value: Value;
   }): void {
-    this.setState({ value });
+    const { setSlateRepr, applyLocalChange } = this.props;
+    setSlateRepr(value);
 
-    const { peerID } = this.state;
-    const currentDoc = this.docSet.getDoc(peerID);
+    const currentDoc = this.props.data;
 
     if (!currentDoc) {
       return;
     }
 
-    console.log(currentDoc);
-    applySlateOperations(this.docSet, peerID, operations, '');
-    const newDoc = this.docSet.getDoc(peerID)!!;
+    applyLocalChange(operations);
+    const newDoc = this.props.data;
 
     const changeData = JSON.stringify(automerge.getChanges(currentDoc, newDoc));
 
-    if (isExtendedDoc(newDoc)) {
+    if (isDocumentLoaded(newDoc)) {
       const { peers } = this.state;
 
       peers.keySeq().forEach((peer) => {
@@ -260,8 +250,6 @@ class EditorPage extends Component<EditorPageProps, AppState> {
           intermediaryConnection.send(changeMessage);
         });
       });
-    } else {
-      throw new Error(`doc is not extended doc, ${newDoc}`);
     }
   }
 
@@ -270,36 +258,31 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     return new Promise<void>((res) => {
       const connection = this.self.connect(connectingPeerID);
       connection.on('open', () => {
-        const { peers, peerID } = this.state;
-
+        const { peerID, sendPeerIDToConnectingPeer } = this.props;
+        const { peers } = this.state;
         this.setState({ peers: peers.set(connectingPeerID, connection) });
-        const initialConnectionMsg: InitialConnectionMessage = {
-          type: 'INITIAL_CONNECTION_MESSAGE',
-          peerID,
-        };
-        connection.send(initialConnectionMsg);
+        sendPeerIDToConnectingPeer({ connection, peerID });
         res();
       });
     });
   }
 
   private sendInitialState(recipientPeerID: string): void {
-    const { peers, peerID } = this.state;
-    const currentDoc = this.docSet.getDoc(peerID);
+    const { data: currentDoc, sendInitialStateToIncomingPeer } = this.props;
+    const { peers } = this.state;
     const connection = peers.get(recipientPeerID);
     const changeData = JSON.stringify(
       automerge.getChanges(automerge.init(), currentDoc!!),
     );
-    const initialStateMessage: InitialStateMessage = {
-      type: 'INITIAL_STATE_MESSAGE',
-      initialState: changeData,
-    };
 
-    connection!!.send(initialStateMessage);
+    sendInitialStateToIncomingPeer({
+      connection,
+      serializedChanges: changeData,
+    });
   }
 }
 
-function isExtendedDoc(doc: any): doc is Doc {
+function isDocumentLoaded(doc: any): doc is Doc {
   return doc.value !== undefined;
 }
 

@@ -25,6 +25,7 @@ import {
 
 import { AppState } from '@/store';
 import moment from 'moment';
+import nanoid from 'nanoid';
 import {
   concat,
   interval,
@@ -35,6 +36,10 @@ import {
   timer,
 } from 'rxjs';
 import * as fromActions from './actions';
+import {
+  InitialConnectionMessage,
+  InitialStateMessage,
+} from './connection-protocol';
 
 interface EncryptedData {
   result: {
@@ -227,10 +232,44 @@ const consumeFetchedDocumentEpic = (
     }),
   );
 
+const startPeerConnectionEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.SEND_PEER_ID_TO_CONNECTING_PEER),
+    flatMap(({ payload: { connection, peerID } }) => {
+      const msg: InitialConnectionMessage = {
+        type: 'INITIAL_CONNECTION_MESSAGE',
+        peerID,
+      };
+      return of(connection.send(msg));
+    }),
+    map(() => fromActions.Actions.previousActionCompleted()),
+  );
+
+const sendInitialDataToPeerEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER),
+    flatMap(({ payload: { connection, serializedChanges } }) => {
+      const msg: InitialStateMessage = {
+        type: 'INITIAL_STATE_MESSAGE',
+        initialState: serializedChanges,
+      };
+      return of(connection.send(msg));
+    }),
+    map(() => fromActions.Actions.previousActionCompleted()),
+  );
+
 export const epic = combineEpics(
   setDocumentIDEpic,
   generateSwarmPrivateKey,
   startLoadingDocumentFromSwarmEpic,
   fetchDocumentEpic,
   consumeFetchedDocumentEpic,
+  startPeerConnectionEpic,
+  sendInitialDataToPeerEpic,
 );

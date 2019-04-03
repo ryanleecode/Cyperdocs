@@ -1,4 +1,4 @@
-declare const ROOT_ID = "00000000-0000-0000-0000-000000000000";
+declare const ROOT_ID = '00000000-0000-0000-0000-000000000000';
 declare const OPTIONS: unique symbol;
 declare const CACHE: unique symbol;
 declare const INBOUND: unique symbol;
@@ -9,25 +9,25 @@ declare const CHANGE: unique symbol;
 declare const ELEM_IDS: unique symbol;
 declare const MAX_ELEM: unique symbol;
 interface Cache {
-    [ROOT_ID]: Doc;
+  [ROOT_ID]: Doc;
 }
 interface State {
-    seq: number;
-    requests: any[];
-    deps: {
-        [key: string]: any;
-    };
-    canUndo: boolean;
-    canRedo: boolean;
-    backendState: any;
+  seq: number;
+  requests: any[];
+  deps: {
+    [key: string]: any;
+  };
+  canUndo: boolean;
+  canRedo: boolean;
+  backendState: any;
 }
 export declare type Doc = Readonly<{
-    [OBJECT_ID]: typeof ROOT_ID;
-    [CACHE]: Cache;
-    [CHANGE]: any;
-    [STATE]: State;
-    [OPTIONS]: any;
-    [key: string]: any;
+  [OBJECT_ID]: typeof ROOT_ID;
+  [CACHE]: Cache;
+  [CHANGE]: any;
+  [STATE]: State;
+  [OPTIONS]: any;
+  [key: string]: any;
 }>;
 
 declare type SendMsgCallback = (msg: any) => void;
@@ -82,7 +82,7 @@ export class WatchableDoc {
   unregisterHandler(handler: any): void;
 }
 
-declare function applyChanges(doc: Doc, changes: any): any;
+declare function applyChanges(doc: Doc, changes: any): Doc;
 declare function getChanges(oldDoc: Doc, newDoc: Doc): any;
 export function assign(target: any, values: any): void;
 declare function change(doc: Doc, message: string, callback: any): Doc;

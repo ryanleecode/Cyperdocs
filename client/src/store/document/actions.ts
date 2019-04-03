@@ -1,5 +1,8 @@
 import { ActionsUnion, createAction } from '@martin_hotell/rex-tils';
-import { Document } from 'slate';
+import { Doc } from 'automerge';
+import Immutable from 'immutable';
+import { Document, Value } from 'slate';
+import { Operation } from 'slate';
 
 export const SET_DOCUMENT_ID = 'SET_DOCUMENT_ID';
 export const SET_POLICY_ENCRYPTING_KEY = 'SET_POLICY_ENCRYPTING_KEY';
@@ -11,14 +14,39 @@ export const LOAD_DOCUMENT_FROM_SWARM = 'LOAD_DOCUMENT_FROM_SWARM';
 export const TRY_FETCH_DOCUMENT_FROM_SWARM = 'TRY_FETCH_DOCUMENT_FROM_SWARM';
 export const CREATE_NEW_DOCUMENT = 'CREATE_NEW_DOCUMENT';
 export const CONSUME_FETCHED_DOCUMENT = 'CONSUME_FETCHED_DOCUMENT';
-export const FILL_DOCUMENT_WITH_DEFAULT_DATA =
-  'FILL_DOCUMENT_WITH_DEFAULT_DATA';
+export const SYNC_DOCUMENT_WITH_CURRENT_SLATE_DATA =
+  'SYNC_DOCUMENT_WITH_CURRENT_SLATE_DATA';
+export const APPLY_LOCALS_CHANGE_TO_DOCUMENT =
+  'APPLY_LOCALS_CHANGE_TO_DOCUMENT';
+export const SET_SLATE_REPR = 'SET_SLATE_REPR';
+export const SET_PEER_ID = 'SET_PEER_ID';
+export const SET_DOCUMENT_DATA = 'SET_DOCUMENT_DATA';
+export const SEND_PEER_ID_TO_CONNECTING_PEER =
+  'SEND_PEER_ID_TO_CONNECTING_PEER';
+export const PREVIOUS_ACTION_COMPLETED = 'PREVIOUS_ACTION_COMPLETED';
+export const SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER =
+  'SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER';
+import Peer from 'peerjs';
 
 export interface EncryptedData {
   result: {
     message_kit: string;
     signature: string;
   };
+}
+
+export interface ConnectionActionPayload {
+  connection: Peer.DataConnection;
+}
+
+export interface SendPeerIDToConnectingPeerPayload
+  extends ConnectionActionPayload {
+  peerID: string;
+}
+
+export interface SendInitialDocumentStateToIncomingPeerPayload
+  extends ConnectionActionPayload {
+  serializedChanges: string;
 }
 
 export const Actions = {
@@ -40,8 +68,19 @@ export const Actions = {
   createNewDocument: () => createAction(CREATE_NEW_DOCUMENT),
   consumeFetchedDocument: (data: EncryptedData) =>
     createAction(CONSUME_FETCHED_DOCUMENT, data),
-  fillDocumentWithDefaultData: (data: Document) =>
-    createAction(FILL_DOCUMENT_WITH_DEFAULT_DATA, data),
+  syncDocumentWithCurrentSlateData: () =>
+    createAction(SYNC_DOCUMENT_WITH_CURRENT_SLATE_DATA),
+  applyLocalChange: (operations: Immutable.List<Operation>) =>
+    createAction(APPLY_LOCALS_CHANGE_TO_DOCUMENT, operations),
+  setSlateRepr: (value: Value) => createAction(SET_SLATE_REPR, value),
+  setPeerID: (peerID: string) => createAction(SET_PEER_ID, peerID),
+  setDocumentData: (data: Doc) => createAction(SET_DOCUMENT_DATA, data),
+  sendPeerIDToConnectingPeer: (payload: SendPeerIDToConnectingPeerPayload) =>
+    createAction(SEND_PEER_ID_TO_CONNECTING_PEER, payload),
+  sendInitialDocumentStateToIncomingPeer: (
+    payload: SendInitialDocumentStateToIncomingPeerPayload,
+  ) => createAction(SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER, payload),
+  previousActionCompleted: () => createAction(PREVIOUS_ACTION_COMPLETED),
   derp: () => createAction('derp'),
   yolo: () => createAction('yolo'),
 };
