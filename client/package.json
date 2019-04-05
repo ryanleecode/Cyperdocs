@@ -37,7 +37,7 @@
     "rxjs": "^6.4.0",
     "rxjs-compat": "^6.4.0",
     "slate": "0.37.0",
-    "slate-automerge": "^1.2.2",
+    "slate-automerge": "^1.2.5",
     "slate-edit-list": "^0.12.1",
     "slate-react": "0.15.0",
     "sweetalert2": "^8.7.0",

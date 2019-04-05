@@ -70,11 +70,21 @@ export const reducer = (
       if (opSetDiff.length > 0) {
         const { slateRepr } = state;
         let change = (slateRepr as any).change();
+        let hasFailed = false;
+        let newJSON: any;
         change = applyAutomergeOperations(opSetDiff, change, () => {
-          /*           newJSON = automergeJsonToSlate({
-            document: { ...currentDoc.value },
-          })!!; */
+          hasFailed = true;
+          console.log('rofl', newDoc.value);
+          newJSON = automergeJsonToSlate(newDoc.value)!!;
         });
+
+        if (hasFailed) {
+          return {
+            ...state,
+            slateRepr: Value.fromJSON(newJSON),
+            data: newDoc,
+          };
+        }
 
         if (!change) {
           return state;
