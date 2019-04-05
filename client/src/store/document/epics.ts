@@ -1,6 +1,4 @@
-import { pubKeyToAddress } from '@erebos/keccak256';
-import { createKeyPair, sign } from '@erebos/secp256k1';
-import { BzzAPI } from '@erebos/swarm';
+import { createKeyPair } from '@erebos/secp256k1';
 import { ofType } from '@martin_hotell/rex-tils';
 import automerge from 'automerge';
 import {
@@ -11,32 +9,16 @@ import {
 import { Rxios } from 'rxios';
 import {
   catchError,
-  concatMap,
   delay,
-  delayWhen,
   flatMap,
   map,
-  retry,
-  retryWhen,
-  shareReplay,
-  take,
-  tap,
   withLatestFrom,
 } from 'rxjs/operators';
 
 import { AppState } from '@/store';
 import crypto from 'crypto';
 import moment from 'moment';
-import nanoid from 'nanoid';
-import {
-  concat,
-  interval,
-  Observable,
-  of,
-  pipe,
-  throwError,
-  timer,
-} from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Value } from 'slate';
 import { automergeJsonToSlate } from 'slate-automerge';
 import * as fromActions from './actions';
@@ -133,7 +115,6 @@ const generateSwarmPrivateKey = (
 
 const startLoadingDocumentFromSwarmEpic = (
   action$: ActionsObservable<fromActions.Actions>,
-  state$: StateObservable<AppState>,
 ) =>
   action$.pipe(
     ofType(fromActions.LOAD_DOCUMENT_FROM_SWARM),
@@ -142,7 +123,6 @@ const startLoadingDocumentFromSwarmEpic = (
 
 const logRetrievalCountEpic = (
   action$: ActionsObservable<fromActions.Actions>,
-  state$: StateObservable<AppState>,
 ) =>
   action$.pipe(
     ofType(fromActions.LOG_RETRIEVAL_COUNT),
@@ -150,7 +130,7 @@ const logRetrievalCountEpic = (
   );
 
 const MAX_DOCUMENT_FETCH_ATTEMPTS = 5;
-const REQUIRED_NUMBER_OF_FETCHES = 3;
+const REQUIRED_NUMBER_OF_FETCHES = 5;
 
 const fetchDocumentEpic = (
   action$: ActionsObservable<fromActions.Actions>,
@@ -257,7 +237,6 @@ const consumeFetchedDocumentEpic = (
 
 const startPeerConnectionEpic = (
   action$: ActionsObservable<fromActions.Actions>,
-  state$: StateObservable<AppState>,
 ) =>
   action$.pipe(
     ofType(fromActions.SEND_PEER_ID_TO_CONNECTING_PEER),
@@ -273,7 +252,6 @@ const startPeerConnectionEpic = (
 
 const sendInitialDataToPeerEpic = (
   action$: ActionsObservable<fromActions.Actions>,
-  state$: StateObservable<AppState>,
 ) =>
   action$.pipe(
     ofType(fromActions.SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER),

@@ -79,6 +79,7 @@ export interface EditorPageProps
   sendInitialStateToIncomingPeer: (
     payload: SendInitialDocumentStateToIncomingPeerPayload,
   ) => void;
+  applyRemoteChangeToLocalDocument: (payload: { [key: string]: any }) => void;
 }
 
 class EditorPage extends Component<EditorPageProps, AppState> {
@@ -147,29 +148,10 @@ class EditorPage extends Component<EditorPageProps, AppState> {
               break;
             }
             case 'CHANGE': {
-              const currentDoc = this.props.data;
+              const { applyRemoteChangeToLocalDocument } = this.props;
+              const changeData = JSON.parse(data.changeData);
+              applyRemoteChangeToLocalDocument(changeData);
 
-              const changes = JSON.parse(data.changeData);
-
-              const newDoc = automerge.applyChanges(currentDoc!!, changes);
-              const opSetDiff = automerge.diff(currentDoc!!, newDoc);
-
-              if (opSetDiff.length !== 0) {
-                const { slateRepr } = this.props;
-                let change = (slateRepr as any).change();
-                change = applyAutomergeOperations(opSetDiff, change, () => {
-                  const doc = this.props.data;
-                  const newJson = automergeJsonToSlate({
-                    document: { ...doc!!.value },
-                  })!!;
-                  setSlateRepr(Value.fromJSON(newJson));
-                });
-                if (change) {
-                  setSlateRepr(change.value);
-                }
-              }
-
-              setDocumentData(newDoc);
               break;
             }
             default:
@@ -207,6 +189,34 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     );
   }
 
+  public componentDidUpdate(prevProps: EditorPageProps): void {
+    const previousDoc = prevProps.data;
+    const currentDoc = this.props.data;
+
+    try {
+      const changes = automerge.getChanges(previousDoc, currentDoc);
+      if (changes.length > 0) {
+        const changeData = JSON.stringify(changes);
+        const { peers } = this.state;
+
+        peers.keySeq().forEach((peerID) => {
+          const connection = peers.get(peerID!);
+          const changeMessage: ChangeMessage = {
+            type: 'CHANGE',
+            changeData,
+          };
+          connection.send(changeMessage);
+        });
+      }
+    } catch (err) {
+      if (err instanceof RangeError) {
+        return;
+      }
+
+      throw err;
+    }
+  }
+
   @boundMethod
   private onChange({
     value,
@@ -225,24 +235,6 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     }
 
     applyLocalChange(operations);
-    const newDoc = this.props.data;
-
-    const changeData = JSON.stringify(automerge.getChanges(currentDoc, newDoc));
-
-    if (isDocumentLoaded(newDoc)) {
-      const { peers } = this.state;
-
-      peers.keySeq().forEach((peer) => {
-        const intermediaryConnection = this.self.connect(peer!);
-        intermediaryConnection.on('open', () => {
-          const changeMessage: ChangeMessage = {
-            type: 'CHANGE',
-            changeData,
-          };
-          intermediaryConnection.send(changeMessage);
-        });
-      });
-    }
   }
 
   @boundMethod

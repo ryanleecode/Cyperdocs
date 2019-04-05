@@ -1,7 +1,12 @@
 import automerge from 'automerge';
 import { Map } from 'immutable';
 import { Value } from 'slate';
-import { applySlateOperations, slateCustomToJson } from 'slate-automerge';
+import {
+  applyAutomergeOperations,
+  applySlateOperations,
+  automergeJsonToSlate,
+  slateCustomToJson,
+} from 'slate-automerge';
 import * as fromActions from './actions';
 
 export const initialState = {
@@ -37,7 +42,7 @@ export const reducer = (
     case fromActions.APPLY_LOCALS_CHANGE_TO_DOCUMENT: {
       const currentDoc = state.data;
       const throwawayDocSet = new automerge.DocSet();
-      const throwawayID = 'abc';
+      const throwawayID = '123';
       throwawayDocSet.setDoc(throwawayID, currentDoc);
       applySlateOperations(throwawayDocSet, throwawayID, action.payload, '');
       const newDoc = throwawayDocSet.getDoc(throwawayID)!!;
@@ -53,6 +58,36 @@ export const reducer = (
       );
 
       return { ...state, retrievalCounts: newRetrievalCounts };
+    }
+    case fromActions.APPLY_REMOTE_CHANGE_TO_DOCUMENT: {
+      const changeData = action.payload;
+
+      const currentDoc = state.data;
+
+      const newDoc = automerge.applyChanges(currentDoc!!, changeData);
+      const opSetDiff = automerge.diff(currentDoc!!, newDoc);
+
+      if (opSetDiff.length > 0) {
+        const { slateRepr } = state;
+        let change = (slateRepr as any).change();
+        change = applyAutomergeOperations(opSetDiff, change, () => {
+          /*           newJSON = automergeJsonToSlate({
+            document: { ...currentDoc.value },
+          })!!; */
+        });
+
+        if (!change) {
+          return state;
+        } else {
+          return {
+            ...state,
+            slateRepr: change.value,
+            data: newDoc,
+          };
+        }
+      }
+
+      return state;
     }
     case fromActions.CONSUME_FETCHED_DOCUMENT: {
       return { ...state, retrievalCounts: Map(), isLoading: false };

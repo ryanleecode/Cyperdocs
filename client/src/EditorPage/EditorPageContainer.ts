@@ -23,6 +23,7 @@ const mapDispatchToProps = {
   sendPeerIDToConnectingPeer: DocumentActions.sendPeerIDToConnectingPeer,
   sendInitialStateToIncomingPeer:
     DocumentActions.sendInitialDocumentStateToIncomingPeer,
+  applyRemoteChangeToLocalDocument: DocumentActions.applyRemoteChangeToDocument,
 };
 
 export default connect(

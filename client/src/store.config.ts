@@ -1,5 +1,6 @@
 import { applyMiddleware, createStore, Middleware } from 'redux';
 import { composeWithDevTools } from 'redux-devtools-extension';
+import logger from 'redux-logger';
 import { createEpicMiddleware } from 'redux-observable';
 import { persistReducer, persistStore } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
@@ -17,7 +18,7 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export function configureStore() {
   const epicMiddleware = createEpicMiddleware();
-  const middleware: Middleware[] = [epicMiddleware];
+  const middleware: Middleware[] = [epicMiddleware, logger];
   const store = createStore(
     persistedReducer,
     composeWithDevTools(applyMiddleware(...middleware)),

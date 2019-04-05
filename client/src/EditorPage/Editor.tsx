@@ -35,7 +35,7 @@ const Editor = (props: EditorProps) => {
     <Card className={editorClassName}>
       <Card.Body>
         {isLoading && <Spinner animation="grow" />}
-        <SlateEditor value={value} onChange={onChange} />
+        <SlateEditor readOnly={isLoading} value={value} onChange={onChange} />
       </Card.Body>
     </Card>
   );

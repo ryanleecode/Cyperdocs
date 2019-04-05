@@ -83,7 +83,7 @@ export class WatchableDoc {
 }
 
 declare function applyChanges(doc: Doc, changes: any): Doc;
-declare function getChanges(oldDoc: Doc, newDoc: Doc): any;
+declare function getChanges(oldDoc: Doc, newDoc: Doc): any[];
 export function assign(target: any, values: any): void;
 declare function change(doc: Doc, message: string, callback: any): Doc;
 declare function diff(oldDoc: Doc, newDoc: Doc): Operation[];
