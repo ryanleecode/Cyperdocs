@@ -1,29 +1,31 @@
 import { Theme } from '@/App';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 import {
+  CheckIfRemoteSlateHashMatchesAfterChangePayload,
   SendInitialDocumentStateToIncomingPeerPayload,
   SendPeerIDToConnectingPeerPayload,
+  SendUpdatedDocumentPayload,
 } from '@/store/document/actions';
 import {
   InitialConnectionMessage,
   InitialStateMessage,
+  RequestUpdatedDocumentFromPeerMessage,
+  SendUpdatedDocumentMessage,
 } from '@/store/document/connection-protocol';
+import { Role } from '@/store/role/types';
 import { boundMethod } from 'autobind-decorator';
 import automerge from 'automerge';
 import { Doc as AutomergeDocument } from 'automerge';
+import { createHash } from 'crypto';
 import Immutable, { Map } from 'immutable';
 import Peer from 'peerjs';
 import React, { Component } from 'react';
 import injectSheet, { WithSheet } from 'react-jss';
 import { RouteComponentProps } from 'react-router';
 import { Operation, Value } from 'slate';
-import {
-  applyAutomergeOperations,
-  automergeJsonToSlate,
-  slateCustomToJson,
-} from 'slate-automerge';
 import Editor from './Editor';
-import { initialValue as initialValueJSON } from './initialValue';
+import { initialValue as initialValueBob } from './initial-value.bob';
+import { initialValue as initialValueAlice } from './initialValue.alice';
 
 const styles = (theme: typeof Theme) => ({
   page: {
@@ -36,26 +38,21 @@ const styles = (theme: typeof Theme) => ({
   },
 });
 
-const initialValue = Value.fromJSON(initialValueJSON as any);
-
-let dumb = automerge.init();
-const initialSlateValue = initialValue;
-dumb = automerge.change(dumb, 'Initialize Slate state', (doc: any) => {
-  doc.note = slateCustomToJson(initialSlateValue.document);
-});
-
 interface ChangeMessage {
   type: 'CHANGE';
   changeData: string;
+  originPeerID: string;
+  slateHash: string;
+}
+
+interface PeerConnectionData {
+  isAuthorized: boolean;
+  connection: Peer.DataConnection;
 }
 
 interface AppState {
-  peers: Map<string, Peer.DataConnection>;
+  peers: Map<string, PeerConnectionData>;
   connectingPeerID: string;
-}
-
-interface Doc {
-  value: any;
 }
 
 export interface EditorPageProps
@@ -66,6 +63,7 @@ export interface EditorPageProps
   slateRepr: Value;
   isLoading: boolean;
   peerID: string;
+  role: Role;
   setDocumentID: (documentID: string) => void;
   loadDocumentFromSwarm: () => void;
   syncDocumentWithCurrentSlateData: () => void;
@@ -80,6 +78,10 @@ export interface EditorPageProps
     payload: SendInitialDocumentStateToIncomingPeerPayload,
   ) => void;
   applyRemoteChangeToLocalDocument: (payload: { [key: string]: any }) => void;
+  checkifRemoteSlateHashMatchesAfterChange: (
+    payload: CheckIfRemoteSlateHashMatchesAfterChangePayload,
+  ) => void;
+  sendUpdatedDocument: (payload: SendUpdatedDocumentPayload) => void;
 }
 
 class EditorPage extends Component<EditorPageProps, AppState> {
@@ -103,16 +105,24 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       setDocumentID,
       setSlateRepr,
       setDocumentData,
+      role,
     } = this.props;
 
     const documentID = this.props.history.location.pathname.match(
       /[^/]*$/g,
     )!![0];
 
+    const initialValueJSON =
+      role === 'Alice' ? (initialValueAlice as any) : (initialValueBob as any);
+    const initialValue = Value.fromJSON(initialValueJSON);
+
     setSlateRepr(initialValue);
     syncDocumentWithCurrentSlateData();
-    setDocumentID(documentID);
-    loadDocumentFromSwarm();
+
+    if (role === 'Alice') {
+      setDocumentID(documentID);
+      loadDocumentFromSwarm();
+    }
 
     this.self = new Peer({
       secure: true,
@@ -130,14 +140,19 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       conn.on(
         'data',
         async (
-          data: InitialConnectionMessage | ChangeMessage | InitialStateMessage,
+          data:
+            | InitialConnectionMessage
+            | ChangeMessage
+            | InitialStateMessage
+            | RequestUpdatedDocumentFromPeerMessage
+            | SendUpdatedDocumentMessage,
         ) => {
           switch (data.type) {
             case 'INITIAL_CONNECTION_MESSAGE': {
               const { peers } = this.state;
               if (!peers.has(data.peerID)) {
                 await this.connectToPeer(data.peerID);
-                this.sendInitialState(data.peerID);
+                // this.sendInitialState(data.peerID);
               }
               break;
             }
@@ -148,11 +163,59 @@ class EditorPage extends Component<EditorPageProps, AppState> {
               break;
             }
             case 'CHANGE': {
-              const { applyRemoteChangeToLocalDocument } = this.props;
+              const {
+                applyRemoteChangeToLocalDocument,
+                checkifRemoteSlateHashMatchesAfterChange,
+              } = this.props;
+              const connectionData = this.state.peers.get(data.originPeerID);
+              if (!connectionData.isAuthorized) {
+                break;
+              }
               const changeData = JSON.parse(data.changeData);
               applyRemoteChangeToLocalDocument(changeData);
-
+              checkifRemoteSlateHashMatchesAfterChange({
+                hash: data.slateHash,
+                connection: connectionData.connection,
+              });
               break;
+            }
+            case 'REQUEST_UPDATED_DOCUMENT_FROM_PEER': {
+              const requestingPeerConnectionData = this.state.peers.get(
+                data.originPeerID,
+              );
+
+              if (!requestingPeerConnectionData.isAuthorized) {
+                break;
+              }
+
+              const { sendUpdatedDocument } = this.props;
+              const currentDoc = this.props.data;
+
+              const changeData = JSON.stringify(
+                automerge.getChanges(automerge.init(), currentDoc!!),
+              );
+
+              sendUpdatedDocument({
+                connection: requestingPeerConnectionData.connection,
+                document: changeData,
+              });
+              break;
+            }
+            case 'SEND_UPDATED_DOCUMENT_MESSAGE': {
+              const currentDoc = this.props.data;
+              const { applyRemoteChangeToLocalDocument } = this.props;
+              try {
+                const doc = JSON.parse(data.document);
+                const newDoc = automerge.applyChanges(automerge.init(), doc);
+                const newMergedDoc = automerge.merge(currentDoc, newDoc);
+
+                const changes = automerge.getChanges(currentDoc, newMergedDoc);
+                if (changes.length > 0) {
+                  applyRemoteChangeToLocalDocument(changes);
+                }
+              } catch (err) {
+                console.log(err);
+              }
             }
             default:
               break;
@@ -163,19 +226,24 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   }
 
   public render(): JSX.Element {
-    const { connectingPeerID } = this.state;
-    const { classes, slateRepr, isLoading } = this.props;
+    const { connectingPeerID, peers } = this.state;
+    const { classes, slateRepr, isLoading, role } = this.props;
     return (
       <div className={classes.page}>
         <Navbar />
-        <input
-          onChange={(e) => {
-            this.setState({ connectingPeerID: e.target.value });
-          }}
-        />
-        <button onClick={() => this.connectToPeer(connectingPeerID)}>
-          Call
-        </button>
+        {role === 'Bob' && peers.size === 0 && (
+          <React.Fragment>
+            <input
+              onChange={(e) => {
+                this.setState({ connectingPeerID: e.target.value });
+              }}
+            />
+            <button onClick={() => this.connectToPeer(connectingPeerID)}>
+              Connect
+            </button>
+          </React.Fragment>
+        )}
+
         <Editor
           isLoading={isLoading}
           className={classes.editor}
@@ -198,14 +266,23 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       if (changes.length > 0) {
         const changeData = JSON.stringify(changes);
         const { peers } = this.state;
+        const { slateRepr, peerID: myPeerID } = this.props;
+        const slateHash = createHash('sha256')
+          .update(JSON.stringify(slateRepr.toJSON()))
+          .digest('base64');
 
         peers.keySeq().forEach((peerID) => {
-          const connection = peers.get(peerID!);
+          const connectionData = peers.get(peerID!);
+          if (!connectionData.isAuthorized) {
+            return;
+          }
           const changeMessage: ChangeMessage = {
             type: 'CHANGE',
+            originPeerID: myPeerID,
             changeData,
+            slateHash,
           };
-          connection.send(changeMessage);
+          connectionData.connection.send(changeMessage);
         });
       }
     } catch (err) {
@@ -242,9 +319,14 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     return new Promise<void>((res) => {
       const connection = this.self.connect(connectingPeerID);
       connection.on('open', () => {
-        const { peerID, sendPeerIDToConnectingPeer } = this.props;
+        const { peerID, sendPeerIDToConnectingPeer, role } = this.props;
         const { peers } = this.state;
-        this.setState({ peers: peers.set(connectingPeerID, connection) });
+        this.setState({
+          peers: peers.set(connectingPeerID, {
+            connection,
+            isAuthorized: role === 'Alice',
+          }),
+        });
         sendPeerIDToConnectingPeer({ connection, peerID });
         res();
       });
@@ -254,20 +336,20 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   private sendInitialState(recipientPeerID: string): void {
     const { data: currentDoc, sendInitialStateToIncomingPeer } = this.props;
     const { peers } = this.state;
-    const connection = peers.get(recipientPeerID);
+    const connectionData = peers.get(recipientPeerID);
     const changeData = JSON.stringify(
       automerge.getChanges(automerge.init(), currentDoc!!),
     );
 
+    if (!connectionData.isAuthorized) {
+      return;
+    }
+
     sendInitialStateToIncomingPeer({
-      connection,
+      connection: connectionData.connection,
       serializedChanges: changeData,
     });
   }
-}
-
-function isDocumentLoaded(doc: any): doc is Doc {
-  return doc.value !== undefined;
 }
 
 export default injectSheet(styles)(EditorPage);

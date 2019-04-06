@@ -1,3 +1,4 @@
+import { Role } from '@/store/role/types';
 import autobind from 'autobind-decorator';
 import axios from 'axios';
 import nanoid from 'nanoid';
@@ -42,6 +43,8 @@ interface Props extends WithSheet<typeof styles>, RouteComponentProps {
   setAliceBaseURL: (aliceBaseURL: string) => void;
   setEnricoBaseURL: (enricoBaseURL: string) => void;
   setSwarmPrivateKey: (swarmPrivateKey: string) => void;
+  setFakeBobBaseURL: (fakeBobBaseURL: string) => void;
+  setRole: (role: Role) => void;
   documentIdentifier: string;
   aliceBaseURL: string;
   policyEncryptingKey: string;
@@ -72,6 +75,11 @@ class AlicePage extends React.Component<Props, State> {
     };
   }
 
+  public componentDidMount(): void {
+    const { setRole } = this.props;
+    setRole('Alice');
+  }
+
   public componentWillReceiveProps(): void {
     this.setEnricoVisibilityConditionally();
   }
@@ -89,6 +97,7 @@ class AlicePage extends React.Component<Props, State> {
       swarmPrivateKey,
       setSwarmPrivateKey,
       fakeBobBaseURL,
+      setFakeBobBaseURL,
     } = this.props;
     const {
       showEnrico,
@@ -104,9 +113,9 @@ class AlicePage extends React.Component<Props, State> {
           </Card.Header>
           <Card.Body>
             <Card.Text>
-              You are Alice. You have the ability to create documents and share
-              it with others by giving explicit permissions using{' '}
-              <code>Nucypher</code>.
+              You are <code>Alice</code>. You have the ability to create
+              documents and share it with others by giving explicit permissions
+              using <code>Nucypher</code>.
             </Card.Text>
             <div className={classes.helperTextContainer}>
               <Card.Text>
@@ -173,12 +182,15 @@ class AlicePage extends React.Component<Props, State> {
                       label="Yes"
                       inline
                       onChange={() => {
-                        this.setState({
-                          wantsToEditExistingDocument: true,
-                          showEnrico: false,
-                        }, () => {
-                          this.setEnricoVisibilityConditionally();
-                        });
+                        this.setState(
+                          {
+                            wantsToEditExistingDocument: true,
+                            showEnrico: false,
+                          },
+                          () => {
+                            this.setEnricoVisibilityConditionally();
+                          },
+                        );
                       }}
                       checked={wantsToEditExistingDocument}
                     />
@@ -318,7 +330,7 @@ class AlicePage extends React.Component<Props, State> {
                     }
                   }}
                   onChange={(event: OnChangeEvent) => {
-                    setAliceBaseURL(event.currentTarget.value || '');
+                    setFakeBobBaseURL(event.currentTarget.value || '');
                   }}
                 />
                 <InputGroup.Append>

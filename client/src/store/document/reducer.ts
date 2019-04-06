@@ -15,6 +15,7 @@ export const initialState = {
   aliceBaseURL: 'http://localhost:8151',
   enricoBaseURL: 'http://localhost:5151',
   fakeBobBaseURL: 'http://localhost:11161',
+  bobBaseURL: 'http://localhost:11151',
   swarmPrivateKey: '',
   slateRepr: Value.fromJSON({}),
   data: automerge.init(),
@@ -74,7 +75,6 @@ export const reducer = (
         let newJSON: any;
         change = applyAutomergeOperations(opSetDiff, change, () => {
           hasFailed = true;
-          console.log('rofl', newDoc.value);
           newJSON = automergeJsonToSlate(newDoc.value)!!;
         });
 

@@ -1,5 +1,6 @@
 import { AppState } from '@/store';
 import { actions as DocumentActions } from '@/store/document';
+import { actions as RoleActions } from '@/store/role';
 import { connect } from 'react-redux';
 import AlicePage from './AlicePage';
 
@@ -17,6 +18,8 @@ const mapDispatchToProps = {
   setDocumentID: DocumentActions.setDocumentID,
   setEnricoBaseURL: DocumentActions.setEnricoBaseURL,
   setSwarmPrivateKey: DocumentActions.setSwarmPrivateKey,
+  setFakeBobBaseURL: DocumentActions.setFakeBobBaseURL,
+  setRole: RoleActions.setRole,
 };
 
 export default connect(

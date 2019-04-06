@@ -9,6 +9,7 @@ const mapStateToProps = (state: AppState) => ({
   slateRepr: state.document.slateRepr,
   peerID: state.document.peerID,
   isLoading: state.document.isLoading,
+  role: state.role.role,
 });
 
 const mapDispatchToProps = {
@@ -24,6 +25,9 @@ const mapDispatchToProps = {
   sendInitialStateToIncomingPeer:
     DocumentActions.sendInitialDocumentStateToIncomingPeer,
   applyRemoteChangeToLocalDocument: DocumentActions.applyRemoteChangeToDocument,
+  checkifRemoteSlateHashMatchesAfterChange:
+    DocumentActions.checkifRemoteSlateHashMatchesAfterChange,
+  sendUpdatedDocument: DocumentActions.sendUpdatedDocument,
 };
 
 export default connect(

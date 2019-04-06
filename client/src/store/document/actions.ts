@@ -30,6 +30,12 @@ export const SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER =
 export const LOG_RETRIEVAL_COUNT = 'LOG_RETRIEVAL_COUNT';
 export const APPLY_REMOTE_CHANGE_TO_DOCUMENT =
   'APPLY_REMOTE_CHANGE_TO_DOCUMENT';
+export const CHECK_IF_REMOTE_DOCUMENT_HASH_MATCHES_AFTER_CHANGES =
+  'CHECK_IF_REMOTE_DOCUMENT_HASH_MATCHES_AFTER_CHANGES';
+export const SEND_UPDATED_DOCUMENT = 'SEND_UPDATED_DOCUMENT';
+export const SET_BOB_BASE_URL = 'SET_BOB_BASE_URL';
+export const SEND_AUTHENTICATION_TOKEN_TO_PEER =
+  'SEND_AUTHENTICATION_TOKEN_TO_PEER';
 
 export interface EncryptedData {
   result: {
@@ -50,6 +56,16 @@ export interface SendPeerIDToConnectingPeerPayload
 export interface SendInitialDocumentStateToIncomingPeerPayload
   extends ConnectionActionPayload {
   serializedChanges: string;
+}
+
+export interface CheckIfRemoteSlateHashMatchesAfterChangePayload {
+  hash: string;
+  connection: Peer.DataConnection;
+}
+
+export interface SendUpdatedDocumentPayload {
+  connection: Peer.DataConnection;
+  document: string;
 }
 
 export const Actions = {
@@ -87,6 +103,15 @@ export const Actions = {
   logRetrievalCount: (hash: string) => createAction(LOG_RETRIEVAL_COUNT, hash),
   applyRemoteChangeToDocument: (changes: { [key: string]: any }) =>
     createAction(APPLY_REMOTE_CHANGE_TO_DOCUMENT, changes),
+  checkifRemoteSlateHashMatchesAfterChange: (
+    payload: CheckIfRemoteSlateHashMatchesAfterChangePayload,
+  ) =>
+    createAction(CHECK_IF_REMOTE_DOCUMENT_HASH_MATCHES_AFTER_CHANGES, payload),
+  sendUpdatedDocument: (payload: SendUpdatedDocumentPayload) =>
+    createAction(SEND_UPDATED_DOCUMENT, payload),
+  setBobBaseURL: (url: string) => createAction(SET_BOB_BASE_URL, url),
+  sendAuthenticationTokenToPeer: () =>
+    createAction(SEND_AUTHENTICATION_TOKEN_TO_PEER),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;

@@ -37,13 +37,11 @@ const styles = (theme: typeof Theme) => ({
   },
 });
 
-interface Props extends WithSheet<typeof styles> {
-  setRole: typeof RoleActions.setRole;
-}
+interface Props extends WithSheet<typeof styles> {}
 
 class HomePage extends React.Component<Props> {
   public render(): JSX.Element {
-    const { classes, setRole } = this.props;
+    const { classes } = this.props;
 
     return (
       <div>
@@ -57,22 +55,16 @@ class HomePage extends React.Component<Props> {
                 </h4>
                 <div className={classes.buttonContainer}>
                   <Link to="/alice-enrico">
-                    <Button
-                      size="lg"
-                      variant="outline-info"
-                      onClick={() => setRole('Alice')}
-                    >
+                    <Button size="lg" variant="outline-info">
                       Try Now as Alice/Enrico
                     </Button>
                   </Link>
 
-                  <Button
-                    size="lg"
-                    variant="outline-info"
-                    onClick={() => setRole('Bob')}
-                  >
-                    Try Now as Bob
-                  </Button>
+                  <Link to="/bob">
+                    <Button size="lg" variant="outline-info">
+                      Try Now as Bob
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>

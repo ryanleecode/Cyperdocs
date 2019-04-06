@@ -3,7 +3,7 @@ import { composeWithDevTools } from 'redux-devtools-extension';
 import logger from 'redux-logger';
 import { createEpicMiddleware } from 'redux-observable';
 import { persistReducer, persistStore } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
+import storage from 'redux-persist/lib/storage/session';
 import { BehaviorSubject } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { rootEpic, rootReducer } from './store';
@@ -17,11 +17,17 @@ const persistConfig = {
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export function configureStore() {
+  const isProd = process.env.NODE_ENV === 'production';
   const epicMiddleware = createEpicMiddleware();
-  const middleware: Middleware[] = [epicMiddleware, logger];
+  const middleware: Middleware[] = [epicMiddleware];
+  if (!isProd) {
+    middleware.push(logger);
+  }
   const store = createStore(
     persistedReducer,
-    composeWithDevTools(applyMiddleware(...middleware)),
+    isProd
+      ? applyMiddleware(...middleware)
+      : composeWithDevTools(applyMiddleware(...middleware)),
   );
 
   const epic$ = new BehaviorSubject(rootEpic);

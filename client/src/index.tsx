@@ -4,12 +4,20 @@ import ReactDOM from 'react-dom';
 import App from './App';
 import './index.scss';
 import * as serviceWorker from './serviceWorker';
+const isProd = process.env.NODE_ENV === 'production';
 
 global.Promise = BlueBirdPromise;
-BlueBirdPromise.config({
-  longStackTraces: true,
-  warnings: false,
-});
+if (!isProd) {
+  BlueBirdPromise.config({
+    longStackTraces: true,
+    warnings: false,
+  });
+} else {
+  BlueBirdPromise.config({
+    longStackTraces: false,
+    warnings: false,
+  });
+}
 
 ReactDOM.render(<App />, document.getElementById('root'));
 

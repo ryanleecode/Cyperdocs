@@ -16,7 +16,8 @@ import {
 } from 'rxjs/operators';
 
 import { AppState } from '@/store';
-import crypto from 'crypto';
+import crypto, { randomBytes } from 'crypto';
+import { createHash } from 'crypto';
 import moment from 'moment';
 import { of, throwError } from 'rxjs';
 import { Value } from 'slate';
@@ -25,6 +26,8 @@ import * as fromActions from './actions';
 import {
   InitialConnectionMessage,
   InitialStateMessage,
+  RequestUpdatedDocumentFromPeerMessage,
+  SendUpdatedDocumentMessage,
 } from './connection-protocol';
 
 interface EncryptedData {
@@ -278,6 +281,64 @@ const setDocumentDataEpic = (
     }),
   );
 
+const checkIfRemoteDocumentHashMatchesAfterChangesEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.CHECK_IF_REMOTE_DOCUMENT_HASH_MATCHES_AFTER_CHANGES),
+    flatMap(({ payload: { connection, hash: remoteHash } }) => {
+      return of({ remoteHash, connection });
+    }),
+    map(({ remoteHash, connection }) => {
+      const peerID = state$.value.document.peerID;
+      const { slateRepr } = state$.value.document;
+      const currentHash = createHash('sha256')
+        .update(JSON.stringify(slateRepr.toJSON()))
+        .digest('base64');
+      if (currentHash !== remoteHash) {
+        const message: RequestUpdatedDocumentFromPeerMessage = {
+          type: 'REQUEST_UPDATED_DOCUMENT_FROM_PEER',
+          originPeerID: peerID,
+        };
+        connection.send(message);
+      }
+
+      return fromActions.Actions.previousActionCompleted();
+    }),
+  );
+
+const sendUpdatedDocumentEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.SEND_UPDATED_DOCUMENT),
+    flatMap(({ payload: { connection, document } }) => {
+      return of({ connection, document });
+    }),
+    map(({ connection, document }) => {
+      const message: SendUpdatedDocumentMessage = {
+        type: 'SEND_UPDATED_DOCUMENT_MESSAGE',
+        document,
+      };
+      connection.send(message);
+      return fromActions.Actions.previousActionCompleted();
+    }),
+  );
+
+const createAuthenticationTokenForPeerEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.SEND_AUTHENTICATION_TOKEN_TO_PEER),
+    map(() => {
+      const token = randomBytes(48).toString('hex');
+      console.log(token);
+    }),
+  );
+
 export const epic = combineEpics(
   setDocumentIDEpic,
   generateSwarmPrivateKey,
@@ -288,4 +349,7 @@ export const epic = combineEpics(
   sendInitialDataToPeerEpic,
   logRetrievalCountEpic,
   setDocumentDataEpic,
+  checkIfRemoteDocumentHashMatchesAfterChangesEpic,
+  sendUpdatedDocumentEpic,
+  createAuthenticationTokenForPeerEpic,
 );

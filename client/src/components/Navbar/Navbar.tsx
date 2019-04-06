@@ -1,4 +1,5 @@
 import EditableTextField from '@/EditableTextField';
+import { Role } from '@/store/role/types';
 import React from 'react';
 import {
   Button,
@@ -26,11 +27,13 @@ const styles = (theme: any) => ({
   },
 });
 
-interface Props extends WithSheet<typeof styles> {}
+interface Props extends WithSheet<typeof styles> {
+  role: Role;
+}
 
 class Navbar extends React.Component<Props> {
   public render(): JSX.Element {
-    const { classes } = this.props;
+    const { classes, role } = this.props;
 
     return (
       <NavbarBootstrap bg="light" expand="lg">
@@ -66,7 +69,9 @@ class Navbar extends React.Component<Props> {
             </NavBootstrapDropdown>
           </NavBootstrap>
           <ButtonToolbar>
-            <Button variant="outline-success">Share</Button>
+            {role === 'Alice' && (
+              <Button variant="outline-success">Share</Button>
+            )}
             {/*             <Modal show={true} size="sm" centered>
               <Modal.Header closeButton>
                 <Modal.Title>Share with a peer</Modal.Title>
