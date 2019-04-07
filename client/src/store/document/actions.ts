@@ -47,6 +47,7 @@ export const AUTHORIZE_PEER = 'AUTHORIZE_PEER';
 export const ADD_AUTHORIZED_PEER = 'ADD_AUTHORIZED_PEER';
 export const SEND_CHANGES_TO_PEERS = 'SEND_CHANGES_TO_PEERS';
 export const REJECT_CONNECTION = 'REJECT_CONNECTION';
+export const REMOVE_AUTHORIZED_PEER = 'REMOVE_AUTHORIZED_PEER';
 
 export interface EncryptedData {
   result: {
@@ -192,6 +193,8 @@ export const Actions = {
     createAction(SEND_CHANGES_TO_PEERS, payload),
   rejectConnection: (payload: RejectConnectionPayload) =>
     createAction(REJECT_CONNECTION, payload),
+  removeAuthorizedPeer: (peerID: string) =>
+    createAction(REMOVE_AUTHORIZED_PEER, peerID),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;

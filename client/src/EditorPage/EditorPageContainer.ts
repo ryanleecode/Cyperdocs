@@ -11,6 +11,7 @@ export const mapStateToProps = (state: AppState) => ({
   isLoading: state.document.isLoading,
   role: state.role.role,
   label: state.document.documentID,
+  authentications: state.document.authentications,
 });
 
 export const mapDispatchToProps = {
@@ -36,6 +37,7 @@ export const mapDispatchToProps = {
   authenticatePeer: DocumentActions.authenticatePeer,
   sendChangesToPeers: DocumentActions.sendChangesToPeers,
   rejectConnection: DocumentActions.rejectConnection,
+  removeAuthorizedPeer: DocumentActions.removeAuthorizedPeer,
 };
 
 export default connect(

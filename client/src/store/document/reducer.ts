@@ -35,6 +35,14 @@ export const reducer = (
   action: fromActions.Actions,
 ): State => {
   switch (action.type) {
+    case fromActions.REMOVE_AUTHORIZED_PEER: {
+      const { authorizedPeers } = state;
+      return {
+        ...state,
+        authorizedPeers: authorizedPeers.remove(action.payload),
+      };
+      break;
+    }
     case fromActions.ADD_AUTHORIZED_PEER: {
       const { authorizedPeers } = state;
       return {

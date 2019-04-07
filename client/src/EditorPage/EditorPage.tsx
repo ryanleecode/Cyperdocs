@@ -22,6 +22,7 @@ import React, { Component } from 'react';
 import injectSheet, { WithSheet } from 'react-jss';
 import LoadingOverlay from 'react-loading-overlay';
 import { RouteComponentProps } from 'react-router';
+import { Observable, Subscription, timer } from 'rxjs';
 import { Operation, Value } from 'slate';
 import Swal from 'sweetalert2';
 import Editor from './Editor';
@@ -65,6 +66,10 @@ class EditorPage extends Component<EditorPageProps, AppState> {
 
   private self!: Peer;
 
+  private authPollingTimer: Observable<number> = timer(0, 60000);
+
+  private subscription?: Subscription;
+
   constructor(props: any) {
     super(props);
 
@@ -84,6 +89,11 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       rejectConnection,
       role,
     } = this.props;
+
+    this.subscription = this.authPollingTimer.subscribe(() => {
+      const { authentications } = this.props;
+      // authentications.forEach(() => {})
+    });
 
     const documentID = this.props.history.location.pathname.match(
       /[^/]*$/g,
@@ -113,6 +123,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       sendAuthenticationTokenToPeer,
       authenticatePeer,
       issueGrant,
+      removeAuthorizedPeer,
     } = this.props;
 
     this.self.on('open', (peerID) => {
@@ -127,6 +138,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       });
       conn.on('close', () => {
         this.setState({ peers: this.state.peers.remove(conn) });
+        removeAuthorizedPeer(conn.peer);
       });
       conn.on(
         'data',
