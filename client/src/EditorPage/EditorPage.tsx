@@ -1,21 +1,17 @@
 import { Theme } from '@/App';
 import { Navbar } from '@/components/Navbar';
 import {
-  CheckIfRemoteSlateHashMatchesAfterChangePayload,
-  SendInitialDocumentStateToIncomingPeerPayload,
-  SendPeerIDToConnectingPeerPayload,
-  SendUpdatedDocumentPayload,
-} from '@/store/document/actions';
-import {
-  InitialConnectionMessage,
+  AuthenticateWithDecryptedTokenMessage,
   InitialStateMessage,
+  IssueGrantMessage,
+  RequestGrantMessage,
   RequestUpdatedDocumentFromPeerMessage,
+  SendEncryptedTokenMessage,
+  SendIdentityMessage,
   SendUpdatedDocumentMessage,
 } from '@/store/document/connection-protocol';
-import { Role } from '@/store/role/types';
 import { boundMethod } from 'autobind-decorator';
 import automerge from 'automerge';
-import { Doc as AutomergeDocument } from 'automerge';
 import { createHash } from 'crypto';
 import Immutable, { Map } from 'immutable';
 import Peer from 'peerjs';
@@ -24,6 +20,7 @@ import injectSheet, { WithSheet } from 'react-jss';
 import { RouteComponentProps } from 'react-router';
 import { Operation, Value } from 'slate';
 import Editor from './Editor';
+import { mapDispatchToProps, mapStateToProps } from './EditorPageContainer';
 import { initialValue as initialValueBob } from './initial-value.bob';
 import { initialValue as initialValueAlice } from './initialValue.alice';
 
@@ -55,34 +52,14 @@ interface AppState {
   connectingPeerID: string;
 }
 
+type EditorPageActions = typeof mapDispatchToProps;
+type EditorPageStateProps = ReturnType<typeof mapStateToProps>;
+
 export interface EditorPageProps
-  extends WithSheet<typeof styles>,
-    RouteComponentProps {
-  swarmPrivateKey: string;
-  data: AutomergeDocument;
-  slateRepr: Value;
-  isLoading: boolean;
-  peerID: string;
-  role: Role;
-  setDocumentID: (documentID: string) => void;
-  loadDocumentFromSwarm: () => void;
-  syncDocumentWithCurrentSlateData: () => void;
-  applyLocalChange: (operations: Immutable.List<Operation>) => void;
-  setSlateRepr: (value: Value) => void;
-  setPeerID: (peerID: string) => void;
-  setDocumentData: (doc: automerge.Doc) => void;
-  sendPeerIDToConnectingPeer: (
-    payload: SendPeerIDToConnectingPeerPayload,
-  ) => void;
-  sendInitialStateToIncomingPeer: (
-    payload: SendInitialDocumentStateToIncomingPeerPayload,
-  ) => void;
-  applyRemoteChangeToLocalDocument: (payload: { [key: string]: any }) => void;
-  checkifRemoteSlateHashMatchesAfterChange: (
-    payload: CheckIfRemoteSlateHashMatchesAfterChangePayload,
-  ) => void;
-  sendUpdatedDocument: (payload: SendUpdatedDocumentPayload) => void;
-}
+  extends EditorPageActions,
+    EditorPageStateProps,
+    WithSheet<typeof styles>,
+    RouteComponentProps {}
 
 class EditorPage extends Component<EditorPageProps, AppState> {
   public state: AppState;
@@ -131,35 +108,61 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       path: '/swag',
     });
 
+    const {
+      setPeerID,
+      sendAuthenticationTokenToPeer,
+      authenticatePeer,
+      issueGrant,
+    } = this.props;
+
     this.self.on('open', (peerID) => {
       console.log(peerID);
-      const { setPeerID } = this.props;
       setPeerID(peerID);
     });
     this.self.on('connection', (conn) => {
+      this.setState({
+        peers: this.state.peers.set(conn.peer, {
+          connection: conn,
+          isAuthorized: role === 'Alice',
+        }),
+      });
+      conn.on('close', () => {
+        this.setState({ peers: this.state.peers.remove(conn.peer) });
+      });
       conn.on(
         'data',
         async (
           data:
-            | InitialConnectionMessage
             | ChangeMessage
-            | InitialStateMessage
             | RequestUpdatedDocumentFromPeerMessage
-            | SendUpdatedDocumentMessage,
+            | SendUpdatedDocumentMessage
+            | RequestGrantMessage
+            | SendIdentityMessage
+            | AuthenticateWithDecryptedTokenMessage,
         ) => {
           switch (data.type) {
-            case 'INITIAL_CONNECTION_MESSAGE': {
-              const { peers } = this.state;
-              if (!peers.has(data.peerID)) {
-                await this.connectToPeer(data.peerID);
-                // this.sendInitialState(data.peerID);
-              }
+            case 'AUTHENTICATE_WITH_DECRYPTED_TOKEN_MESSAGE': {
+              authenticatePeer({
+                decryptedToken: data.token,
+                bobVerifyingKey: data.bobVerifyingKey,
+                connection: conn,
+              });
               break;
             }
-            case 'INITIAL_STATE_MESSAGE': {
-              const doc = JSON.parse(data.initialState);
-              const newDoc = automerge.applyChanges(automerge.init(), doc);
-              setDocumentData(newDoc);
+            case 'REQUEST_GRANT_MESSAGE': {
+              issueGrant({
+                label: data.label,
+                bobEncryptingKey: data.bob.encryptingKey,
+                bobVerifyingKey: data.bob.verifyingKey,
+                connection: conn,
+              });
+              break;
+            }
+            case 'SEND_IDENTITY_MESSAGE': {
+              sendAuthenticationTokenToPeer({
+                bobVerifyingKey: data.bobVerifyingKey,
+                connection: conn,
+              });
               break;
             }
             case 'CHANGE': {
@@ -181,7 +184,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             }
             case 'REQUEST_UPDATED_DOCUMENT_FROM_PEER': {
               const requestingPeerConnectionData = this.state.peers.get(
-                data.originPeerID,
+                conn.peer,
               );
 
               if (!requestingPeerConnectionData.isAuthorized) {
@@ -227,7 +230,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
 
   public render(): JSX.Element {
     const { connectingPeerID, peers } = this.state;
-    const { classes, slateRepr, isLoading, role } = this.props;
+    const { classes, slateRepr, isLoading, role, sendIdentity } = this.props;
     return (
       <div className={classes.page}>
         <Navbar />
@@ -238,7 +241,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
                 this.setState({ connectingPeerID: e.target.value });
               }}
             />
-            <button onClick={() => this.connectToPeer(connectingPeerID)}>
+            <button onClick={() => this.connectToAlice(connectingPeerID)}>
               Connect
             </button>
           </React.Fragment>
@@ -315,11 +318,13 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   }
 
   @boundMethod
-  private connectToPeer(connectingPeerID: string): Promise<void> {
-    return new Promise<void>((res) => {
+  private connectToAlice(
+    connectingPeerID: string,
+  ): Promise<Peer.DataConnection> {
+    return new Promise<Peer.DataConnection>((res) => {
       const connection = this.self.connect(connectingPeerID);
       connection.on('open', () => {
-        const { peerID, sendPeerIDToConnectingPeer, role } = this.props;
+        const { role, sendIdentity } = this.props;
         const { peers } = this.state;
         this.setState({
           peers: peers.set(connectingPeerID, {
@@ -327,28 +332,79 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             isAuthorized: role === 'Alice',
           }),
         });
-        sendPeerIDToConnectingPeer({ connection, peerID });
-        res();
+        sendIdentity({ connection });
+        this.addBobHandlersToConnection(connection);
+        res(connection);
       });
     });
   }
 
-  private sendInitialState(recipientPeerID: string): void {
-    const { data: currentDoc, sendInitialStateToIncomingPeer } = this.props;
-    const { peers } = this.state;
-    const connectionData = peers.get(recipientPeerID);
-    const changeData = JSON.stringify(
-      automerge.getChanges(automerge.init(), currentDoc!!),
+  @boundMethod
+  private addBobHandlersToConnection(connection: Peer.DataConnection): void {
+    const {
+      requestGrantFromAlice,
+      authenticateWithDecryptedAuthenticationToken,
+      setDocumentData,
+    } = this.props;
+    connection.on(
+      'data',
+      async (
+        data:
+          | SendEncryptedTokenMessage
+          | IssueGrantMessage
+          | InitialStateMessage,
+      ) => {
+        switch (data.type) {
+          case 'INITIAL_STATE_MESSAGE': {
+            const doc = JSON.parse(data.initialState);
+            const newDoc = automerge.applyChanges(automerge.init(), doc);
+            setDocumentData(newDoc);
+            break;
+          }
+          case 'ISSUE_GRANT_MESSAGE': {
+            localStorage.setItem(data.label, data.policyEncryptingKey);
+            localStorage.setItem(
+              data.policyEncryptingKey,
+              data.aliceVerifyingKey,
+            );
+            connection.on('close', async () =>
+              this.connectToAlice(connection.peer),
+            );
+            connection.close();
+            break;
+          }
+          case 'SEND_ENCRYPTED_TOKEN_MESSAGE': {
+            const policyEncryptingKey = localStorage.getItem(data.label);
+            if (!policyEncryptingKey) {
+              requestGrantFromAlice({
+                label: data.label,
+                connection,
+              });
+              break;
+            }
+            const aliceVerifyingKey = localStorage.getItem(policyEncryptingKey);
+            if (!aliceVerifyingKey) {
+              requestGrantFromAlice({
+                label: data.label,
+                connection,
+              });
+              break;
+            }
+
+            authenticateWithDecryptedAuthenticationToken({
+              label: data.label,
+              encryptedToken: data.token,
+              connection,
+              policyEncryptingKey,
+              aliceVerifyingKey,
+            });
+            break;
+          }
+          default:
+            break;
+        }
+      },
     );
-
-    if (!connectionData.isAuthorized) {
-      return;
-    }
-
-    sendInitialStateToIncomingPeer({
-      connection: connectionData.connection,
-      serializedChanges: changeData,
-    });
   }
 }
 

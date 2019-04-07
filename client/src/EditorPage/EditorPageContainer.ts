@@ -3,16 +3,17 @@ import { actions as DocumentActions } from '@/store/document';
 import { connect } from 'react-redux';
 import EditorPage from './EditorPage';
 
-const mapStateToProps = (state: AppState) => ({
+export const mapStateToProps = (state: AppState) => ({
   swarmPrivateKey: state.document.swarmPrivateKey,
   data: state.document.data,
   slateRepr: state.document.slateRepr,
   peerID: state.document.peerID,
   isLoading: state.document.isLoading,
   role: state.role.role,
+  label: state.document.documentID,
 });
 
-const mapDispatchToProps = {
+export const mapDispatchToProps = {
   loadDocumentFromSwarm: DocumentActions.loadDocumentFromSwarm,
   setDocumentID: DocumentActions.setDocumentID,
   syncDocumentWithCurrentSlateData:
@@ -22,12 +23,17 @@ const mapDispatchToProps = {
   setPeerID: DocumentActions.setPeerID,
   setDocumentData: DocumentActions.setDocumentData,
   sendPeerIDToConnectingPeer: DocumentActions.sendPeerIDToConnectingPeer,
-  sendInitialStateToIncomingPeer:
-    DocumentActions.sendInitialDocumentStateToIncomingPeer,
   applyRemoteChangeToLocalDocument: DocumentActions.applyRemoteChangeToDocument,
   checkifRemoteSlateHashMatchesAfterChange:
     DocumentActions.checkifRemoteSlateHashMatchesAfterChange,
   sendUpdatedDocument: DocumentActions.sendUpdatedDocument,
+  sendAuthenticationTokenToPeer: DocumentActions.sendAuthenticationTokenToPeer,
+  requestGrantFromAlice: DocumentActions.requestGrantFromAlice,
+  issueGrant: DocumentActions.issueGrant,
+  sendIdentity: DocumentActions.sendIdentity,
+  authenticateWithDecryptedAuthenticationToken:
+    DocumentActions.authenticateWithDecryptedAuthenticationToken,
+  authenticatePeer: DocumentActions.authenticatePeer,
 };
 
 export default connect(

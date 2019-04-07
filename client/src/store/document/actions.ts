@@ -25,8 +25,6 @@ export const SET_DOCUMENT_DATA = 'SET_DOCUMENT_DATA';
 export const SEND_PEER_ID_TO_CONNECTING_PEER =
   'SEND_PEER_ID_TO_CONNECTING_PEER';
 export const PREVIOUS_ACTION_COMPLETED = 'PREVIOUS_ACTION_COMPLETED';
-export const SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER =
-  'SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER';
 export const LOG_RETRIEVAL_COUNT = 'LOG_RETRIEVAL_COUNT';
 export const APPLY_REMOTE_CHANGE_TO_DOCUMENT =
   'APPLY_REMOTE_CHANGE_TO_DOCUMENT';
@@ -36,6 +34,16 @@ export const SEND_UPDATED_DOCUMENT = 'SEND_UPDATED_DOCUMENT';
 export const SET_BOB_BASE_URL = 'SET_BOB_BASE_URL';
 export const SEND_AUTHENTICATION_TOKEN_TO_PEER =
   'SEND_AUTHENTICATION_TOKEN_TO_PEER';
+export const SENT_AUTHENTICATION_TOKEN_TO_PEER =
+  'SENT_AUTHENTICATION_TOKEN_TO_PEER';
+export const REQUEST_GRANT_FROM_ALICE = 'REQUEST_GRANT_FROM_ALICE';
+export const SENT_MESSAGE_OVER_WEBSOCKET = 'SENT_MESSAGE_OVER_WEBSOCKET';
+export const ISSUE_GRANT = 'ISSUE_GRANT';
+export const SEND_IDENTITY = 'SEND_IDENTITY';
+export const AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN =
+  'AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN';
+export const AUTHORIZE_PEER = 'AUTHORIZE_PEER';
+export const ADD_AUTHORIZED_PEER = 'ADD_AUTHORIZED_PEER';
 
 export interface EncryptedData {
   result: {
@@ -68,6 +76,46 @@ export interface SendUpdatedDocumentPayload {
   document: string;
 }
 
+export interface SendAuthenticationTokenToPeerPayload {
+  bobVerifyingKey: string;
+  connection: Peer.DataConnection;
+}
+
+export interface SentAuthenticationTokenToPeer {
+  bobVerifyingKey: string;
+  token: string;
+}
+
+export interface RequestGrantFromAlicePayload {
+  label: string;
+  connection: Peer.DataConnection;
+}
+
+export interface IssueGrantPayload {
+  label: string;
+  bobVerifyingKey: string;
+  bobEncryptingKey: string;
+  connection: Peer.DataConnection;
+}
+
+export interface SendIdentityPayload {
+  connection: Peer.DataConnection;
+}
+
+export interface AuthenticateWithDecryptedAuthenticationTokenPayload {
+  label: string;
+  encryptedToken: string;
+  aliceVerifyingKey: string;
+  policyEncryptingKey: string;
+  connection: Peer.DataConnection;
+}
+
+export interface AuthorizePeerPayload {
+  bobVerifyingKey: string;
+  decryptedToken: string;
+  connection: Peer.DataConnection;
+}
+
 export const Actions = {
   setDocumentID: (documentID: string) =>
     createAction(SET_DOCUMENT_ID, documentID),
@@ -96,9 +144,6 @@ export const Actions = {
   setDocumentData: (data: Doc) => createAction(SET_DOCUMENT_DATA, data),
   sendPeerIDToConnectingPeer: (payload: SendPeerIDToConnectingPeerPayload) =>
     createAction(SEND_PEER_ID_TO_CONNECTING_PEER, payload),
-  sendInitialDocumentStateToIncomingPeer: (
-    payload: SendInitialDocumentStateToIncomingPeerPayload,
-  ) => createAction(SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER, payload),
   previousActionCompleted: () => createAction(PREVIOUS_ACTION_COMPLETED),
   logRetrievalCount: (hash: string) => createAction(LOG_RETRIEVAL_COUNT, hash),
   applyRemoteChangeToDocument: (changes: { [key: string]: any }) =>
@@ -110,8 +155,26 @@ export const Actions = {
   sendUpdatedDocument: (payload: SendUpdatedDocumentPayload) =>
     createAction(SEND_UPDATED_DOCUMENT, payload),
   setBobBaseURL: (url: string) => createAction(SET_BOB_BASE_URL, url),
-  sendAuthenticationTokenToPeer: () =>
-    createAction(SEND_AUTHENTICATION_TOKEN_TO_PEER),
+  sendAuthenticationTokenToPeer: (
+    payload: SendAuthenticationTokenToPeerPayload,
+  ) => createAction(SEND_AUTHENTICATION_TOKEN_TO_PEER, payload),
+  sentAuthenticationTokenToPeer: (payload: SentAuthenticationTokenToPeer) =>
+    createAction(SENT_AUTHENTICATION_TOKEN_TO_PEER, payload),
+  requestGrantFromAlice: (payload: RequestGrantFromAlicePayload) =>
+    createAction(REQUEST_GRANT_FROM_ALICE, payload),
+  sentMessageOverWebsocket: (payload: any) =>
+    createAction(SENT_MESSAGE_OVER_WEBSOCKET, payload),
+  issueGrant: (payload: IssueGrantPayload) =>
+    createAction(ISSUE_GRANT, payload),
+  sendIdentity: (payload: SendIdentityPayload) =>
+    createAction(SEND_IDENTITY, payload),
+  authenticateWithDecryptedAuthenticationToken: (
+    payload: AuthenticateWithDecryptedAuthenticationTokenPayload,
+  ) => createAction(AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN, payload),
+  authenticatePeer: (payload: AuthorizePeerPayload) =>
+    createAction(AUTHORIZE_PEER, payload),
+  addAuthorizedPeer: (connection: Peer.DataConnection) =>
+    createAction(ADD_AUTHORIZED_PEER, connection),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;

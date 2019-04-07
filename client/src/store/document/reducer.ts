@@ -1,5 +1,5 @@
 import automerge from 'automerge';
-import { Map } from 'immutable';
+import { Map, Set } from 'immutable';
 import { Value } from 'slate';
 import {
   applyAutomergeOperations,
@@ -8,6 +8,9 @@ import {
   slateCustomToJson,
 } from 'slate-automerge';
 import * as fromActions from './actions';
+
+type BobVerifyingKey = string;
+type Token = string;
 
 export const initialState = {
   documentID: '',
@@ -22,6 +25,8 @@ export const initialState = {
   peerID: '',
   retrievalCounts: Map<string, number>(),
   isLoading: false,
+  authorizedPeers: Set<string>(),
+  authentications: Map<BobVerifyingKey, Token>(),
 };
 export type State = typeof initialState;
 
@@ -98,6 +103,16 @@ export const reducer = (
       }
 
       return state;
+    }
+    case fromActions.SENT_AUTHENTICATION_TOKEN_TO_PEER: {
+      const { bobVerifyingKey, token } = action.payload;
+      const currentAuthentications = state.authentications;
+      const newAuthentications = currentAuthentications.set(
+        bobVerifyingKey,
+        token,
+      );
+
+      return { ...state, authentications: newAuthentications };
     }
     case fromActions.CONSUME_FETCHED_DOCUMENT: {
       return { ...state, retrievalCounts: Map(), isLoading: false };

@@ -24,9 +24,13 @@ import { Value } from 'slate';
 import { automergeJsonToSlate } from 'slate-automerge';
 import * as fromActions from './actions';
 import {
-  InitialConnectionMessage,
+  AuthenticateWithDecryptedTokenMessage,
   InitialStateMessage,
+  IssueGrantMessage,
+  RequestGrantMessage,
   RequestUpdatedDocumentFromPeerMessage,
+  SendEncryptedTokenMessage,
+  SendIdentityMessage,
   SendUpdatedDocumentMessage,
 } from './connection-protocol';
 
@@ -238,36 +242,6 @@ const consumeFetchedDocumentEpic = (
     }),
   );
 
-const startPeerConnectionEpic = (
-  action$: ActionsObservable<fromActions.Actions>,
-) =>
-  action$.pipe(
-    ofType(fromActions.SEND_PEER_ID_TO_CONNECTING_PEER),
-    flatMap(({ payload: { connection, peerID } }) => {
-      const msg: InitialConnectionMessage = {
-        type: 'INITIAL_CONNECTION_MESSAGE',
-        peerID,
-      };
-      return of(connection.send(msg));
-    }),
-    map(() => fromActions.Actions.previousActionCompleted()),
-  );
-
-const sendInitialDataToPeerEpic = (
-  action$: ActionsObservable<fromActions.Actions>,
-) =>
-  action$.pipe(
-    ofType(fromActions.SEND_INITIAL_DOCUMENT_STATE_TO_INCOMING_PEER),
-    flatMap(({ payload: { connection, serializedChanges } }) => {
-      const msg: InitialStateMessage = {
-        type: 'INITIAL_STATE_MESSAGE',
-        initialState: serializedChanges,
-      };
-      return of(connection.send(msg));
-    }),
-    map(() => fromActions.Actions.previousActionCompleted()),
-  );
-
 const setDocumentDataEpic = (
   action$: ActionsObservable<fromActions.Actions>,
   state$: StateObservable<AppState>,
@@ -299,9 +273,9 @@ const checkIfRemoteDocumentHashMatchesAfterChangesEpic = (
       if (currentHash !== remoteHash) {
         const message: RequestUpdatedDocumentFromPeerMessage = {
           type: 'REQUEST_UPDATED_DOCUMENT_FROM_PEER',
-          originPeerID: peerID,
         };
         connection.send(message);
+        return fromActions.Actions.sentMessageOverWebsocket(message);
       }
 
       return fromActions.Actions.previousActionCompleted();
@@ -323,7 +297,7 @@ const sendUpdatedDocumentEpic = (
         document,
       };
       connection.send(message);
-      return fromActions.Actions.previousActionCompleted();
+      return fromActions.Actions.sentMessageOverWebsocket(message);
     }),
   );
 
@@ -333,9 +307,211 @@ const createAuthenticationTokenForPeerEpic = (
 ) =>
   action$.pipe(
     ofType(fromActions.SEND_AUTHENTICATION_TOKEN_TO_PEER),
-    map(() => {
-      const token = randomBytes(48).toString('hex');
-      console.log(token);
+    flatMap(({ payload: { connection, bobVerifyingKey } }) => {
+      const {
+        document: { enricoBaseURL },
+      } = state$.value;
+      const token = randomBytes(48).toString('base64');
+
+      return http
+        .post<EncryptedData>(`${enricoBaseURL}/encrypt_message`, {
+          message: token,
+        })
+        .pipe(
+          map(({ result: { message_kit: encryptedToken } }) => {
+            const label = state$.value.document.documentID;
+            const message: SendEncryptedTokenMessage = {
+              type: 'SEND_ENCRYPTED_TOKEN_MESSAGE',
+              token: encryptedToken,
+              label,
+            };
+            connection.send(message);
+
+            return fromActions.Actions.sentAuthenticationTokenToPeer({
+              bobVerifyingKey,
+              token,
+            });
+          }),
+        );
+    }),
+  );
+
+const requestAliceGrantEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.REQUEST_GRANT_FROM_ALICE),
+    flatMap(({ payload: { connection, label } }) => {
+      const {
+        document: { bobBaseURL },
+      } = state$.value;
+      return http.get<BobPublicKeys>(`${bobBaseURL}/public_keys`).pipe(
+        map(({ result: { bob_encrypting_key, bob_verifying_key } }) => {
+          const message: RequestGrantMessage = {
+            type: 'REQUEST_GRANT_MESSAGE',
+            label,
+            bob: {
+              encryptingKey: bob_encrypting_key,
+              verifyingKey: bob_verifying_key,
+            },
+          };
+          connection.send(message);
+
+          return fromActions.Actions.sentMessageOverWebsocket(message);
+        }),
+      );
+    }),
+  );
+
+const issueGrantEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.ISSUE_GRANT),
+    flatMap(
+      ({
+        payload: {
+          label, // tslint:disable-next-line:variable-name
+          bobEncryptingKey: bob_encrypting_key, // tslint:disable-next-line:variable-name
+          bobVerifyingKey: bob_verifying_key,
+          connection,
+        },
+      }) => {
+        const { aliceBaseURL } = state$.value.document;
+        return http
+          .put<AliceGrant>(`${aliceBaseURL}/grant`, {
+            bob_verifying_key,
+            bob_encrypting_key,
+            m: 1,
+            n: 1,
+            label,
+            expiration: moment().add(1, 'minute'),
+          })
+          .pipe(
+            map(
+              ({ result: { alice_verifying_key, policy_encrypting_key } }) => {
+                const message: IssueGrantMessage = {
+                  type: 'ISSUE_GRANT_MESSAGE',
+                  label,
+                  aliceVerifyingKey: alice_verifying_key,
+                  policyEncryptingKey: policy_encrypting_key,
+                };
+
+                connection.send(message);
+                return fromActions.Actions.sentMessageOverWebsocket(message);
+              },
+            ),
+          );
+      },
+    ),
+  );
+
+const sendIdentityEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.SEND_IDENTITY),
+    flatMap(({ payload: { connection } }) => {
+      const bobBaseURL = state$.value.document.bobBaseURL;
+      return http.get<BobPublicKeys>(`${bobBaseURL}/public_keys`).pipe(
+        map(({ result: { bob_verifying_key } }) => {
+          const message: SendIdentityMessage = {
+            type: 'SEND_IDENTITY_MESSAGE',
+            bobVerifyingKey: bob_verifying_key,
+          };
+
+          connection.send(message);
+
+          return fromActions.Actions.sentMessageOverWebsocket(message);
+        }),
+      );
+    }),
+  );
+
+const sendDecryptedAuthenticationTokenEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN),
+    flatMap(
+      ({
+        payload: {
+          connection,
+          encryptedToken,
+          aliceVerifyingKey,
+          policyEncryptingKey,
+          label,
+        },
+      }) => {
+        const bobBaseURL = state$.value.document.bobBaseURL;
+        return http.get<BobPublicKeys>(`${bobBaseURL}/public_keys`).pipe(
+          flatMap(({ result: { bob_verifying_key } }) => {
+            return http
+              .post<BobRetrieve>(`${bobBaseURL}/retrieve`, {
+                label,
+                policy_encrypting_key: policyEncryptingKey,
+                alice_verifying_key: aliceVerifyingKey,
+                message_kit: encryptedToken,
+              })
+              .pipe(
+                map(({ result: { cleartexts } }) => {
+                  const message: AuthenticateWithDecryptedTokenMessage = {
+                    type: 'AUTHENTICATE_WITH_DECRYPTED_TOKEN_MESSAGE',
+                    bobVerifyingKey: bob_verifying_key,
+                    token: cleartexts[0],
+                  };
+
+                  connection.send(message);
+
+                  return fromActions.Actions.sentMessageOverWebsocket(message);
+                }),
+              );
+          }),
+        );
+      },
+    ),
+  );
+
+const authorizePeerEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.AUTHORIZE_PEER),
+    map(({ payload: { decryptedToken, bobVerifyingKey, connection } }) => {
+      const { authentications } = state$.value.document;
+      const storedToken = authentications.get(bobVerifyingKey);
+
+      if (storedToken === decryptedToken) {
+        return fromActions.Actions.addAuthorizedPeer(connection);
+      }
+      return;
+    }),
+  );
+
+const sendInitialDataToPeerEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.ADD_AUTHORIZED_PEER),
+    map(({ payload: connection }) => {
+      const currentDoc = state$.value.document.data;
+      const changeData = JSON.stringify(
+        automerge.getChanges(automerge.init(), currentDoc),
+      );
+
+      const msg: InitialStateMessage = {
+        type: 'INITIAL_STATE_MESSAGE',
+        initialState: changeData,
+      };
+
+      connection.send(msg);
+      return fromActions.Actions.sentMessageOverWebsocket(msg);
     }),
   );
 
@@ -345,11 +521,15 @@ export const epic = combineEpics(
   startLoadingDocumentFromSwarmEpic,
   fetchDocumentEpic,
   consumeFetchedDocumentEpic,
-  startPeerConnectionEpic,
   sendInitialDataToPeerEpic,
   logRetrievalCountEpic,
   setDocumentDataEpic,
   checkIfRemoteDocumentHashMatchesAfterChangesEpic,
   sendUpdatedDocumentEpic,
   createAuthenticationTokenForPeerEpic,
+  requestAliceGrantEpic,
+  issueGrantEpic,
+  sendIdentityEpic,
+  sendDecryptedAuthenticationTokenEpic,
+  authorizePeerEpic,
 );

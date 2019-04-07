@@ -8,7 +8,13 @@ import { reducer as roleReducer } from './role';
 const documentPersistConfig = {
   key: 'document',
   storage,
-  blacklist: ['data', 'slateRepr', 'peerID', 'retrievalCounts'],
+  blacklist: [
+    'data',
+    'slateRepr',
+    'peerID',
+    'retrievalCounts',
+    'authentications',
+  ],
 };
 
 const persistedDocumentReducer = persistReducer(
