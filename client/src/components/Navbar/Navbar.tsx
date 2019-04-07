@@ -34,6 +34,7 @@ interface Props
 interface State {
   areCredentialsShown: boolean;
   arePeersShown: boolean;
+  isShareModalShown: boolean;
 }
 
 class Navbar extends React.Component<Props, State> {
@@ -43,6 +44,7 @@ class Navbar extends React.Component<Props, State> {
     this.state = {
       areCredentialsShown: false,
       arePeersShown: false,
+      isShareModalShown: false,
     };
   }
 
@@ -54,11 +56,39 @@ class Navbar extends React.Component<Props, State> {
       authorizedPeers,
       classes,
       kickPeer,
+      peerID: myPeerID,
     } = this.props;
-    const { areCredentialsShown, arePeersShown } = this.state;
+    const {
+      areCredentialsShown,
+      arePeersShown,
+      isShareModalShown,
+    } = this.state;
 
     return (
       <React.Fragment>
+        <Modal
+          show={isShareModalShown}
+          onHide={() => this.setState({ isShareModalShown: false })}
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Share Document To Bobs</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p>
+              Share this identifier with any Bob, Bob will be able to connect to
+              you and you will have to accept in order to collaborate.
+            </p>
+            <code>{myPeerID}</code>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              variant="secondary"
+              onClick={() => this.setState({ isShareModalShown: false })}
+            >
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
         <Modal
           show={arePeersShown}
           onHide={() => this.setState({ arePeersShown: false })}
@@ -157,7 +187,12 @@ class Navbar extends React.Component<Props, State> {
             </NavBootstrap>
             <Form inline>
               {role === 'Alice' && (
-                <Button variant="outline-success">Share</Button>
+                <Button
+                  variant="outline-success"
+                  onClick={() => this.setState({ isShareModalShown: true })}
+                >
+                  Share
+                </Button>
               )}
             </Form>
           </NavbarBootstrap.Collapse>

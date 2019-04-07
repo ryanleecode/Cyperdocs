@@ -8,6 +8,7 @@ export const mapStateToProps = (state: AppState) => ({
   documentID: state.document.documentID,
   swarmPrivateKey: state.document.swarmPrivateKey,
   authorizedPeers: state.document.authorizedPeers,
+  peerID: state.document.peerID,
 });
 
 export const mapDispatchToProps = {
