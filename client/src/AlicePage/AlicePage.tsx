@@ -10,13 +10,13 @@ import {
   FormControl,
   FormControlProps,
   InputGroup,
-  Spinner,
 } from 'react-bootstrap';
 import { BsPrefixProps, ReplaceProps } from 'react-bootstrap/helpers';
 import injectSheet, { WithSheet } from 'react-jss';
 import { RouteComponentProps } from 'react-router';
 import Swal from 'sweetalert2';
 import uuid from 'uuid/v4';
+import { mapDispatchToProps, mapStateToProps } from './AlicePageContainer';
 
 const styles = () => ({
   commandBlock: {
@@ -38,26 +38,21 @@ const styles = () => ({
   },
 });
 
-interface Props extends WithSheet<typeof styles>, RouteComponentProps {
-  setDocumentID: (id: string) => void;
-  setAliceBaseURL: (aliceBaseURL: string) => void;
-  setEnricoBaseURL: (enricoBaseURL: string) => void;
-  setSwarmPrivateKey: (swarmPrivateKey: string) => void;
-  setFakeBobBaseURL: (fakeBobBaseURL: string) => void;
-  setRole: (role: Role) => void;
-  documentIdentifier: string;
-  aliceBaseURL: string;
-  policyEncryptingKey: string;
-  enricoBaseURL: string;
-  swarmPrivateKey: string;
-  fakeBobBaseURL: string;
-}
+type AlicePageActions = typeof mapDispatchToProps;
+type AlicePageStateProps = ReturnType<typeof mapStateToProps>;
+
+interface Props
+  extends AlicePageActions,
+    AlicePageStateProps,
+    WithSheet<typeof styles>,
+    RouteComponentProps {}
 
 interface State {
   showEnrico: boolean;
   showFakeBob: boolean;
   showLabelInput: boolean;
   wantsToEditExistingDocument: boolean;
+  isAliceNodeTested: boolean;
 }
 
 type OnChangeEvent = React.FormEvent<
@@ -71,13 +66,15 @@ class AlicePage extends React.Component<Props, State> {
       showEnrico: false,
       showFakeBob: false,
       showLabelInput: false,
-      wantsToEditExistingDocument: true,
+      wantsToEditExistingDocument: false,
+      isAliceNodeTested: false,
     };
   }
 
   public componentDidMount(): void {
-    const { setRole } = this.props;
+    const { setRole, createNewDocument } = this.props;
     setRole('Alice');
+    createNewDocument();
   }
 
   public componentWillReceiveProps(): void {
@@ -199,11 +196,12 @@ class AlicePage extends React.Component<Props, State> {
                       label="No"
                       inline
                       onChange={() => {
+                        const { createNewDocument } = this.props;
                         this.setState({
                           wantsToEditExistingDocument: false,
                           showEnrico: true,
                         });
-                        setDocumentID(nanoid(26));
+                        createNewDocument();
                       }}
                       checked={!wantsToEditExistingDocument}
                     />
@@ -358,6 +356,9 @@ class AlicePage extends React.Component<Props, State> {
       'post',
       'Alice',
     );
+    this.setState({
+      isAliceNodeTested: true,
+    });
     this.setEnricoVisibilityConditionally();
   }
 
@@ -379,13 +380,21 @@ class AlicePage extends React.Component<Props, State> {
 
   @autobind
   private async onFakeBobTestURL(): Promise<void> {
-    const { fakeBobBaseURL, documentIdentifier } = this.props;
+    const {
+      fakeBobBaseURL,
+      documentIdentifier,
+      initializeSwarmDocumnentWithDefaultValues,
+    } = this.props;
+    const { wantsToEditExistingDocument } = this.state;
     const isSuccessful = await this.testURL(
       `${fakeBobBaseURL}/public_keys`,
       'get',
       'Fake Bob',
     );
     if (isSuccessful) {
+      if (!wantsToEditExistingDocument) {
+        initializeSwarmDocumnentWithDefaultValues();
+      }
       this.props.history.push(`/editor/${documentIdentifier}`);
     }
   }
@@ -420,11 +429,12 @@ class AlicePage extends React.Component<Props, State> {
 
   private setEnricoVisibilityConditionally(): void {
     const { swarmPrivateKey, documentIdentifier } = this.props;
-    const { wantsToEditExistingDocument } = this.state;
+    const { wantsToEditExistingDocument, isAliceNodeTested } = this.state;
     this.setState({
       showEnrico:
-        Boolean(swarmPrivateKey && documentIdentifier) ||
-        !wantsToEditExistingDocument,
+        (Boolean(swarmPrivateKey && documentIdentifier) ||
+          !wantsToEditExistingDocument) &&
+        isAliceNodeTested,
     });
   }
 }

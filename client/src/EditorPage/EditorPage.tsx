@@ -66,7 +66,11 @@ class EditorPage extends Component<EditorPageProps, AppState> {
 
   private self!: Peer;
 
-  private authPollingTimer: Observable<number> = timer(0, 5000);
+  private authPollingTimer: Observable<number> = timer(
+    0,
+    Number(process.env.REACT_APP_REQUEST_AUTHENTICATION_INTERVAL_IN_SECONDS) *
+      1000,
+  );
 
   private subscription?: Subscription;
 

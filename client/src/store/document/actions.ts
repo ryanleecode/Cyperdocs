@@ -48,6 +48,8 @@ export const ADD_AUTHORIZED_PEER = 'ADD_AUTHORIZED_PEER';
 export const SEND_CHANGES_TO_PEERS = 'SEND_CHANGES_TO_PEERS';
 export const REJECT_CONNECTION = 'REJECT_CONNECTION';
 export const REMOVE_AUTHORIZED_PEER = 'REMOVE_AUTHORIZED_PEER';
+export const INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES =
+  'INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES';
 
 export interface EncryptedData {
   result: {
@@ -200,6 +202,8 @@ export const Actions = {
     createAction(REJECT_CONNECTION, payload),
   removeAuthorizedPeer: (peerID: string) =>
     createAction(REMOVE_AUTHORIZED_PEER, peerID),
+  initializeSwarmDocumnentWithDefaultValues: () =>
+    createAction(INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;

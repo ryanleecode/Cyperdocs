@@ -15,16 +15,6 @@ const styles = (theme: any) => ({
     display: 'flex',
     justifyContent: 'space-between',
   },
-  documentTitleText: {
-    fontSize: '1.15rem',
-    pointerEvents: 'auto',
-    marginRight: '1rem',
-  },
-  documentTitleContainer: {
-    position: 'absolute',
-    pointerEvents: 'none',
-    width: '100%',
-  },
 });
 
 interface Props extends WithSheet<typeof styles> {
@@ -37,12 +27,6 @@ class Navbar extends React.Component<Props> {
 
     return (
       <NavbarBootstrap bg="light" expand="lg">
-        <div className={classes.documentTitleContainer}>
-          <EditableTextField
-            className={classes.documentTitleText}
-            defaultText="Untitled Document"
-          />
-        </div>
         <NavbarBootstrap.Brand href="#home">CypherDocs</NavbarBootstrap.Brand>
         <NavbarBootstrap.Toggle aria-controls="basic-navbar-nav" />
         <NavbarBootstrap.Collapse

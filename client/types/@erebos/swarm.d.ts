@@ -27,7 +27,7 @@ export class BzzAPI {
     hashOrParams: any,
     data: any,
     options: any,
-    signParams: any,
+    signParams?: any,
   ): any;
   upload(data: any, options: any): Promise<string>;
   uploadDirectory(directory: any, options: any): any;
@@ -36,7 +36,7 @@ export class BzzAPI {
     hashOrParams: any,
     data: any,
     options: any,
-    signParams: any,
+    signParams?: any,
   ): any;
   uploadFile(data: any, options: any): any;
   uploadFileFrom(path: any, options: any): any;

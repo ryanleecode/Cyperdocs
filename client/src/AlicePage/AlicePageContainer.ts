@@ -4,7 +4,7 @@ import { actions as RoleActions } from '@/store/role';
 import { connect } from 'react-redux';
 import AlicePage from './AlicePage';
 
-const mapStateToProps = (state: AppState) => ({
+export const mapStateToProps = (state: AppState) => ({
   documentIdentifier: state.document.documentID,
   aliceBaseURL: state.document.aliceBaseURL,
   policyEncryptingKey: state.document.policyEncryptingKey,
@@ -13,13 +13,16 @@ const mapStateToProps = (state: AppState) => ({
   swarmPrivateKey: state.document.swarmPrivateKey,
 });
 
-const mapDispatchToProps = {
+export const mapDispatchToProps = {
   setAliceBaseURL: DocumentActions.setAliceBaseURL,
   setDocumentID: DocumentActions.setDocumentID,
   setEnricoBaseURL: DocumentActions.setEnricoBaseURL,
   setSwarmPrivateKey: DocumentActions.setSwarmPrivateKey,
   setFakeBobBaseURL: DocumentActions.setFakeBobBaseURL,
   setRole: RoleActions.setRole,
+  createNewDocument: DocumentActions.createNewDocument,
+  initializeSwarmDocumnentWithDefaultValues:
+    DocumentActions.initializeSwarmDocumnentWithDefaultValues,
 };
 
 export default connect(

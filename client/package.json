@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@craco/craco": "^3.6.0",
+    "@erebos/api-bzz-browser": "^0.7.0",
     "@erebos/keccak256": "^0.7.0",
     "@erebos/secp256k1": "^0.7.0",
     "@erebos/swarm": "^0.7.0",

@@ -1,4 +1,4 @@
-import { createKeyPair } from '@erebos/secp256k1';
+import { createKeyPair, sign } from '@erebos/secp256k1';
 import { ofType } from '@martin_hotell/rex-tils';
 import automerge from 'automerge';
 import {
@@ -16,12 +16,14 @@ import {
 } from 'rxjs/operators';
 
 import { AppState } from '@/store';
+import BzzAPI from '@erebos/api-bzz-browser';
+import { pubKeyToAddress } from '@erebos/keccak256';
 import crypto, { randomBytes } from 'crypto';
 import { createHash } from 'crypto';
 import moment from 'moment';
-import { of, throwError } from 'rxjs';
+import { from, of, throwError } from 'rxjs';
 import { Value } from 'slate';
-import { automergeJsonToSlate } from 'slate-automerge';
+import { automergeJsonToSlate, slateCustomToJson } from 'slate-automerge';
 import * as fromActions from './actions';
 import {
   AuthenticateWithDecryptedTokenMessage,
@@ -36,6 +38,7 @@ import {
   SendIdentityMessage,
   SendUpdatedDocumentMessage,
 } from './connection-protocol';
+import { initialValue as InitialValueGeneric } from './initial-value.generic';
 
 interface EncryptedData {
   result: {
@@ -101,25 +104,39 @@ const setDocumentIDEpic = (
     }),
   );
 
-const generateSwarmPrivateKey = (
+const createNewDocumentEpic = (
   action$: ActionsObservable<fromActions.Actions>,
   state$: StateObservable<AppState>,
 ) =>
   action$.pipe(
-    ofType(fromActions.LOAD_DOCUMENT_FROM_SWARM),
+    ofType(fromActions.CREATE_NEW_DOCUMENT),
     withLatestFrom(state$),
-    map(() => {
-      const {
-        document: { swarmPrivateKey: stateSwarmPrivateKey },
-      } = state$.value;
+    flatMap(() => {
+      const keyPair = createKeyPair();
+      const swarmPrivateKey = keyPair.getPrivate('hex').toString();
+      const signBytes = async (bytes: number[]) =>
+        sign(bytes, keyPair.getPrivate());
 
-      let swarmPrivateKey: string = stateSwarmPrivateKey;
-      if (!stateSwarmPrivateKey) {
-        const keyPair = createKeyPair();
-        swarmPrivateKey = keyPair.getPrivate().toString();
-      }
+      const bzz = new BzzAPI({
+        url: BZZ_URL,
+        signBytes,
+      });
 
-      return fromActions.Actions.setSwarmPrivateKey(swarmPrivateKey);
+      const user = pubKeyToAddress(keyPair.getPublic().encode());
+
+      return from(
+        bzz.createFeedManifest({
+          user,
+          name: 'derping',
+        } as any),
+      ).pipe(
+        flatMap((feedHash) => {
+          return of(
+            fromActions.Actions.setSwarmPrivateKey(swarmPrivateKey),
+            fromActions.Actions.setDocumentID(feedHash.toString()),
+          );
+        }),
+      );
     }),
   );
 
@@ -183,15 +200,6 @@ const fetchDocumentEpic = (
     }),
   );
 
-/*   const keyPair = createKeyPair(swarmPrivateKey);
-  const user = pubKeyToAddress(keyPair.getPublic().encode());
-  const signBytes = async (bytes: number[]) =>
-    sign(bytes, keyPair.getPrivate());
-  const bzz = new BzzAPI({
-    url: BZZ_URL,
-    signBytes,
-  });
- */
 const consumeFetchedDocumentEpic = (
   action$: ActionsObservable<fromActions.Actions>,
   state$: StateObservable<AppState>,
@@ -238,8 +246,7 @@ const consumeFetchedDocumentEpic = (
     }),
     map((bobRetrieve) => bobRetrieve.result.cleartexts[0]),
     map((clearText) => {
-      const doc = JSON.parse(clearText);
-      const newDoc = automerge.applyChanges(automerge.init(), doc);
+      const newDoc = automerge.load(clearText);
 
       return fromActions.Actions.setDocumentData(newDoc);
     }),
@@ -389,7 +396,10 @@ const issueGrantEpic = (
             m: 1,
             n: 1,
             label,
-            expiration: moment().add(10, 'seconds'),
+            expiration: moment().add(
+              Number(process.env.REACT_APP_GRANT_DURATION_IN_SECONDS),
+              'seconds',
+            ),
           })
           .pipe(
             map(
@@ -592,9 +602,63 @@ const rejectConnectionEpic = (
     }),
   );
 
+const initializeSwarmDocumentWithInitialValuesEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES),
+
+    flatMap(() => {
+      const {
+        document: { swarmPrivateKey, documentID, enricoBaseURL },
+      } = state$.value;
+
+      const keyPair = createKeyPair(swarmPrivateKey);
+      const signBytes = async (bytes: number[]) =>
+        sign(bytes, keyPair.getPrivate());
+      const bzz = new BzzAPI({
+        url: BZZ_URL,
+        signBytes,
+      });
+
+      const initialValue = Value.fromJSON(InitialValueGeneric as any);
+
+      const newDoc = automerge.change(
+        automerge.init(),
+        fromActions.SYNC_DOCUMENT_WITH_CURRENT_SLATE_DATA,
+        (doc: { value: any }) => (doc.value = slateCustomToJson(initialValue)),
+      );
+      const serializedDoc = automerge.save(newDoc);
+
+      return http
+        .post<EncryptedData>(`${enricoBaseURL}/encrypt_message`, {
+          message: serializedDoc,
+        })
+        .pipe(
+          flatMap((encryptedData) => {
+            return from(
+              bzz.uploadFeedValue(
+                documentID,
+                {
+                  'index.html': {
+                    contentType: 'application/json',
+                    data: JSON.stringify(encryptedData),
+                  },
+                },
+                {
+                  defaultPath: 'index.html',
+                },
+              ),
+            ).pipe(map(() => fromActions.Actions.previousActionCompleted()));
+          }),
+        );
+    }),
+  );
+
 export const epic = combineEpics(
   setDocumentIDEpic,
-  generateSwarmPrivateKey,
+  createNewDocumentEpic,
   startLoadingDocumentFromSwarmEpic,
   fetchDocumentEpic,
   consumeFetchedDocumentEpic,
@@ -611,4 +675,5 @@ export const epic = combineEpics(
   authorizePeerEpic,
   sendChangesToPeersEpic,
   rejectConnectionEpic,
+  initializeSwarmDocumentWithInitialValuesEpic,
 );
