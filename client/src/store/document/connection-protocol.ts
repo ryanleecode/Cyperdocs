@@ -44,3 +44,14 @@ export interface AuthenticateWithDecryptedTokenMessage {
   bobVerifyingKey: string;
   token: string;
 }
+
+export interface ChangeMessage {
+  type: 'CHANGE';
+  changeData: string;
+  slateHash: string;
+}
+
+export interface BadAuthorizationMessage {
+  type: 'BAD_AUTHORIZATION';
+  label: string;
+}

@@ -25,6 +25,8 @@ import { automergeJsonToSlate } from 'slate-automerge';
 import * as fromActions from './actions';
 import {
   AuthenticateWithDecryptedTokenMessage,
+  BadAuthorizationMessage,
+  ChangeMessage,
   InitialStateMessage,
   IssueGrantMessage,
   RequestGrantMessage,
@@ -483,13 +485,19 @@ const authorizePeerEpic = (
   action$.pipe(
     ofType(fromActions.AUTHORIZE_PEER),
     map(({ payload: { decryptedToken, bobVerifyingKey, connection } }) => {
-      const { authentications } = state$.value.document;
+      const { authentications, documentID } = state$.value.document;
       const storedToken = authentications.get(bobVerifyingKey);
 
       if (storedToken === decryptedToken) {
         return fromActions.Actions.addAuthorizedPeer(connection);
+      } else {
+        const message: BadAuthorizationMessage = {
+          type: 'BAD_AUTHORIZATION',
+          label: documentID,
+        };
+        connection.send(message);
+        connection.close();
       }
-      return;
     }),
   );
 
@@ -515,6 +523,36 @@ const sendInitialDataToPeerEpic = (
     }),
   );
 
+const sendChangesToPeersEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.SEND_CHANGES_TO_PEERS),
+    map(({ payload: { changeData, slateHash, peers } }) => {
+      const {
+        role: { role },
+        document: { authorizedPeers },
+      } = state$.value;
+
+      const changeMessage: ChangeMessage = {
+        type: 'CHANGE',
+        changeData,
+        slateHash,
+      };
+
+      peers.keySeq().forEach((peerID) => {
+        if (role === 'Alice' && !authorizedPeers.contains(peerID || '')) {
+          return;
+        }
+        const connection = peers.get(peerID!);
+        connection.send(changeMessage);
+      });
+
+      return fromActions.Actions.sentMessageOverWebsocket(changeMessage);
+    }),
+  );
+
 export const epic = combineEpics(
   setDocumentIDEpic,
   generateSwarmPrivateKey,
@@ -532,4 +570,5 @@ export const epic = combineEpics(
   sendIdentityEpic,
   sendDecryptedAuthenticationTokenEpic,
   authorizePeerEpic,
+  sendChangesToPeersEpic,
 );

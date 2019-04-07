@@ -14,6 +14,8 @@ const documentPersistConfig = {
     'peerID',
     'retrievalCounts',
     'authentications',
+    'authorizedPeers',
+    'isLoading',
   ],
 };
 

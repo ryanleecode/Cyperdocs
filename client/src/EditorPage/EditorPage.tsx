@@ -2,6 +2,8 @@ import { Theme } from '@/App';
 import { Navbar } from '@/components/Navbar';
 import {
   AuthenticateWithDecryptedTokenMessage,
+  BadAuthorizationMessage,
+  ChangeMessage,
   InitialStateMessage,
   IssueGrantMessage,
   RequestGrantMessage,
@@ -35,20 +37,8 @@ const styles = (theme: typeof Theme) => ({
   },
 });
 
-interface ChangeMessage {
-  type: 'CHANGE';
-  changeData: string;
-  originPeerID: string;
-  slateHash: string;
-}
-
-interface PeerConnectionData {
-  isAuthorized: boolean;
-  connection: Peer.DataConnection;
-}
-
 interface AppState {
-  peers: Map<string, PeerConnectionData>;
+  peers: Map<string, Peer.DataConnection>;
   connectingPeerID: string;
 }
 
@@ -81,7 +71,6 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       syncDocumentWithCurrentSlateData,
       setDocumentID,
       setSlateRepr,
-      setDocumentData,
       role,
     } = this.props;
 
@@ -121,10 +110,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     });
     this.self.on('connection', (conn) => {
       this.setState({
-        peers: this.state.peers.set(conn.peer, {
-          connection: conn,
-          isAuthorized: role === 'Alice',
-        }),
+        peers: this.state.peers.set(conn.peer, conn),
       });
       conn.on('close', () => {
         this.setState({ peers: this.state.peers.remove(conn.peer) });
@@ -170,27 +156,15 @@ class EditorPage extends Component<EditorPageProps, AppState> {
                 applyRemoteChangeToLocalDocument,
                 checkifRemoteSlateHashMatchesAfterChange,
               } = this.props;
-              const connectionData = this.state.peers.get(data.originPeerID);
-              if (!connectionData.isAuthorized) {
-                break;
-              }
               const changeData = JSON.parse(data.changeData);
               applyRemoteChangeToLocalDocument(changeData);
               checkifRemoteSlateHashMatchesAfterChange({
                 hash: data.slateHash,
-                connection: connectionData.connection,
+                connection: conn,
               });
               break;
             }
             case 'REQUEST_UPDATED_DOCUMENT_FROM_PEER': {
-              const requestingPeerConnectionData = this.state.peers.get(
-                conn.peer,
-              );
-
-              if (!requestingPeerConnectionData.isAuthorized) {
-                break;
-              }
-
               const { sendUpdatedDocument } = this.props;
               const currentDoc = this.props.data;
 
@@ -199,7 +173,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
               );
 
               sendUpdatedDocument({
-                connection: requestingPeerConnectionData.connection,
+                connection: conn,
                 document: changeData,
               });
               break;
@@ -261,31 +235,26 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   }
 
   public componentDidUpdate(prevProps: EditorPageProps): void {
+    const { sendChangesToPeers } = this.props;
     const previousDoc = prevProps.data;
     const currentDoc = this.props.data;
+    const { peers } = this.state;
 
     try {
       const changes = automerge.getChanges(previousDoc, currentDoc);
       if (changes.length > 0) {
         const changeData = JSON.stringify(changes);
-        const { peers } = this.state;
-        const { slateRepr, peerID: myPeerID } = this.props;
+        const { slateRepr } = this.props;
         const slateHash = createHash('sha256')
           .update(JSON.stringify(slateRepr.toJSON()))
           .digest('base64');
 
-        peers.keySeq().forEach((peerID) => {
-          const connectionData = peers.get(peerID!);
-          if (!connectionData.isAuthorized) {
-            return;
-          }
-          const changeMessage: ChangeMessage = {
-            type: 'CHANGE',
-            originPeerID: myPeerID,
-            changeData,
-            slateHash,
-          };
-          connectionData.connection.send(changeMessage);
+        console.log(peers);
+
+        sendChangesToPeers({
+          peers,
+          changeData,
+          slateHash,
         });
       }
     } catch (err) {
@@ -324,13 +293,10 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     return new Promise<Peer.DataConnection>((res) => {
       const connection = this.self.connect(connectingPeerID);
       connection.on('open', () => {
-        const { role, sendIdentity } = this.props;
+        const { sendIdentity } = this.props;
         const { peers } = this.state;
         this.setState({
-          peers: peers.set(connectingPeerID, {
-            connection,
-            isAuthorized: role === 'Alice',
-          }),
+          peers: peers.set(connectingPeerID, connection),
         });
         sendIdentity({ connection });
         this.addBobHandlersToConnection(connection);
@@ -352,9 +318,30 @@ class EditorPage extends Component<EditorPageProps, AppState> {
         data:
           | SendEncryptedTokenMessage
           | IssueGrantMessage
-          | InitialStateMessage,
+          | InitialStateMessage
+          | ChangeMessage
+          | BadAuthorizationMessage,
       ) => {
         switch (data.type) {
+          case 'BAD_AUTHORIZATION': {
+            localStorage.removeItem(data.label);
+            connection.close();
+            this.connectToAlice(connection.peer);
+            break;
+          }
+          case 'CHANGE': {
+            const {
+              applyRemoteChangeToLocalDocument,
+              checkifRemoteSlateHashMatchesAfterChange,
+            } = this.props;
+            const changeData = JSON.parse(data.changeData);
+            applyRemoteChangeToLocalDocument(changeData);
+            checkifRemoteSlateHashMatchesAfterChange({
+              hash: data.slateHash,
+              connection,
+            });
+            break;
+          }
           case 'INITIAL_STATE_MESSAGE': {
             const doc = JSON.parse(data.initialState);
             const newDoc = automerge.applyChanges(automerge.init(), doc);
@@ -380,16 +367,15 @@ class EditorPage extends Component<EditorPageProps, AppState> {
                 label: data.label,
                 connection,
               });
-              break;
-            }
-            const aliceVerifyingKey = localStorage.getItem(policyEncryptingKey);
-            if (!aliceVerifyingKey) {
               requestGrantFromAlice({
                 label: data.label,
                 connection,
               });
               break;
             }
+            const aliceVerifyingKey = localStorage.getItem(
+              policyEncryptingKey,
+            )!!;
 
             authenticateWithDecryptedAuthenticationToken({
               label: data.label,

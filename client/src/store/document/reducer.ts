@@ -35,6 +35,13 @@ export const reducer = (
   action: fromActions.Actions,
 ): State => {
   switch (action.type) {
+    case fromActions.ADD_AUTHORIZED_PEER: {
+      const { authorizedPeers } = state;
+      return {
+        ...state,
+        authorizedPeers: authorizedPeers.add(action.payload.peer),
+      };
+    }
     case fromActions.SYNC_DOCUMENT_WITH_CURRENT_SLATE_DATA: {
       const currentDoc = state.data;
       const newDoc = automerge.change(
@@ -45,7 +52,7 @@ export const reducer = (
       );
       return { ...state, data: newDoc };
     }
-    case fromActions.APPLY_LOCALS_CHANGE_TO_DOCUMENT: {
+    case fromActions.APPLY_LOCAL_CHANGES_TO_DOCUMENT: {
       const currentDoc = state.data;
       const throwawayDocSet = new automerge.DocSet();
       const throwawayID = '123';

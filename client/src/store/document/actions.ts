@@ -1,6 +1,7 @@
 import { ActionsUnion, createAction } from '@martin_hotell/rex-tils';
 import { Doc } from 'automerge';
 import Immutable from 'immutable';
+import { Map } from 'immutable';
 import Peer from 'peerjs';
 import { Value } from 'slate';
 import { Operation } from 'slate';
@@ -17,8 +18,8 @@ export const CREATE_NEW_DOCUMENT = 'CREATE_NEW_DOCUMENT';
 export const CONSUME_FETCHED_DOCUMENT = 'CONSUME_FETCHED_DOCUMENT';
 export const SYNC_DOCUMENT_WITH_CURRENT_SLATE_DATA =
   'SYNC_DOCUMENT_WITH_CURRENT_SLATE_DATA';
-export const APPLY_LOCALS_CHANGE_TO_DOCUMENT =
-  'APPLY_LOCALS_CHANGE_TO_DOCUMENT';
+export const APPLY_LOCAL_CHANGES_TO_DOCUMENT =
+  'APPLY_LOCAL_CHANGES_TO_DOCUMENT';
 export const SET_SLATE_REPR = 'SET_SLATE_REPR';
 export const SET_PEER_ID = 'SET_PEER_ID';
 export const SET_DOCUMENT_DATA = 'SET_DOCUMENT_DATA';
@@ -44,6 +45,7 @@ export const AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN =
   'AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN';
 export const AUTHORIZE_PEER = 'AUTHORIZE_PEER';
 export const ADD_AUTHORIZED_PEER = 'ADD_AUTHORIZED_PEER';
+export const SEND_CHANGES_TO_PEERS = 'SEND_CHANGES_TO_PEERS';
 
 export interface EncryptedData {
   result: {
@@ -116,6 +118,12 @@ export interface AuthorizePeerPayload {
   connection: Peer.DataConnection;
 }
 
+export interface SendChangesToPeersPayload {
+  peers: Map<string, Peer.DataConnection>;
+  changeData: string;
+  slateHash: string;
+}
+
 export const Actions = {
   setDocumentID: (documentID: string) =>
     createAction(SET_DOCUMENT_ID, documentID),
@@ -138,7 +146,7 @@ export const Actions = {
   syncDocumentWithCurrentSlateData: () =>
     createAction(SYNC_DOCUMENT_WITH_CURRENT_SLATE_DATA),
   applyLocalChange: (operations: Immutable.List<Operation>) =>
-    createAction(APPLY_LOCALS_CHANGE_TO_DOCUMENT, operations),
+    createAction(APPLY_LOCAL_CHANGES_TO_DOCUMENT, operations),
   setSlateRepr: (value: Value) => createAction(SET_SLATE_REPR, value),
   setPeerID: (peerID: string) => createAction(SET_PEER_ID, peerID),
   setDocumentData: (data: Doc) => createAction(SET_DOCUMENT_DATA, data),
@@ -175,6 +183,8 @@ export const Actions = {
     createAction(AUTHORIZE_PEER, payload),
   addAuthorizedPeer: (connection: Peer.DataConnection) =>
     createAction(ADD_AUTHORIZED_PEER, connection),
+  sendChangesToPeers: (payload: SendChangesToPeersPayload) =>
+    createAction(SEND_CHANGES_TO_PEERS, payload),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;
