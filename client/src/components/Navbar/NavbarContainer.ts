@@ -1,12 +1,18 @@
 import { AppState } from '@/store';
+import { actions as DocumentActions } from '@/store/document';
 import { connect } from 'react-redux';
 import NavBar from './Navbar';
 
-const mapStateToProps = (state: AppState) => ({
+export const mapStateToProps = (state: AppState) => ({
   role: state.role.role,
+  documentID: state.document.documentID,
+  swarmPrivateKey: state.document.swarmPrivateKey,
+  authorizedPeers: state.document.authorizedPeers,
 });
 
-const mapDispatchToProps = {};
+export const mapDispatchToProps = {
+  kickPeer: DocumentActions.kickPeer,
+};
 
 export default connect(
   mapStateToProps,

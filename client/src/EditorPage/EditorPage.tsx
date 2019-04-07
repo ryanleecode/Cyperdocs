@@ -309,10 +309,29 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   }
 
   public componentDidUpdate(prevProps: EditorPageProps): void {
-    const { sendChangesToPeers } = this.props;
+    const {
+      sendChangesToPeers,
+      authorizedPeers,
+      rejectConnection,
+    } = this.props;
     const previousDoc = prevProps.data;
     const currentDoc = this.props.data;
     const { peers, isBobConnectingToAlice } = this.state;
+
+    const previousAuthorizedPeers = prevProps.authorizedPeers;
+    const diff = previousAuthorizedPeers.filter(
+      (peer) => !authorizedPeers.has(peer!!),
+    );
+    diff.toKeyedSeq().forEach((_, peerID) => {
+      const peerToBeRemoved = this.state.peers.find(
+        (conn) => conn!!.peer === peerID,
+      );
+      if (peerToBeRemoved) {
+        rejectConnection({
+          connection: peerToBeRemoved,
+        });
+      }
+    });
 
     if (peers.size === 0 && isBobConnectingToAlice) {
       this.setState({

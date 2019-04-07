@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux';
 import { combineEpics } from 'redux-observable';
 import { persistReducer } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
+import storage from 'redux-persist/lib/storage/session';
 import { epic as documentEpic, reducer as documentReducer } from './document';
 import { reducer as roleReducer } from './role';
 

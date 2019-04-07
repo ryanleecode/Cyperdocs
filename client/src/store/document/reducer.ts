@@ -1,4 +1,5 @@
 import automerge from 'automerge';
+import { stat } from 'fs';
 import { Map, Set } from 'immutable';
 import { Value } from 'slate';
 import {
@@ -35,13 +36,20 @@ export const reducer = (
   action: fromActions.Actions,
 ): State => {
   switch (action.type) {
+    case fromActions.KICK_PEER: {
+      return {
+        ...state,
+        authorizedPeers: state.authorizedPeers.remove(action.payload.peerID),
+      };
+    }
+    case fromActions.AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN:
+      return { ...state, documentID: action.payload.label };
     case fromActions.REMOVE_AUTHORIZED_PEER: {
       const { authorizedPeers } = state;
       return {
         ...state,
         authorizedPeers: authorizedPeers.remove(action.payload),
       };
-      break;
     }
     case fromActions.ADD_AUTHORIZED_PEER: {
       const { authorizedPeers } = state;
