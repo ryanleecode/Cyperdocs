@@ -11,7 +11,7 @@ export const mapStateToProps = (state: AppState) => ({
   isLoading: state.document.isLoading,
   role: state.role.role,
   label: state.document.documentID,
-  authentications: state.document.authentications,
+  authorizedPeers: state.document.authorizedPeers,
 });
 
 export const mapDispatchToProps = {

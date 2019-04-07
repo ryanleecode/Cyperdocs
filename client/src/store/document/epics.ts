@@ -389,7 +389,7 @@ const issueGrantEpic = (
             m: 1,
             n: 1,
             label,
-            expiration: moment().add(1, 'minute'),
+            expiration: moment().add(30, 'seconds'),
           })
           .pipe(
             map(
@@ -497,14 +497,18 @@ const authorizePeerEpic = (
       const storedToken = authentications.get(bobVerifyingKey);
 
       if (storedToken === decryptedToken) {
-        return fromActions.Actions.addAuthorizedPeer(connection);
+        return fromActions.Actions.addAuthorizedPeer({
+          connection,
+          bobVerifyingKey,
+        });
       } else {
         const message: BadAuthorizationMessage = {
           type: 'BAD_AUTHORIZATION',
           label: documentID,
         };
         connection.send(message);
-        connection.close();
+
+        return fromActions.Actions.sentMessageOverWebsocket(message);
       }
     }),
   );
@@ -515,7 +519,7 @@ const sendInitialDataToPeerEpic = (
 ) =>
   action$.pipe(
     ofType(fromActions.ADD_AUTHORIZED_PEER),
-    map(({ payload: connection }) => {
+    map(({ payload: { connection } }) => {
       const currentDoc = state$.value.document.data;
       const changeData = JSON.stringify(
         automerge.getChanges(automerge.init(), currentDoc),
@@ -549,11 +553,12 @@ const sendChangesToPeersEpic = (
         slateHash,
       };
 
-      peers.keySeq().forEach((connection) => {
+      peers.forEach((connection) => {
         if (!connection) {
           return;
         }
-        if (role === 'Alice' && !authorizedPeers.contains(connection.peer)) {
+
+        if (role === 'Alice' && !authorizedPeers.has(connection.peer)) {
           return;
         }
         connection.send(changeMessage);

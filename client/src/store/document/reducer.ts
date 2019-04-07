@@ -25,7 +25,7 @@ export const initialState = {
   peerID: '',
   retrievalCounts: Map<string, number>(),
   isLoading: false,
-  authorizedPeers: Set<string>(),
+  authorizedPeers: Map<string, BobVerifyingKey>(),
   authentications: Map<BobVerifyingKey, Token>(),
 };
 export type State = typeof initialState;
@@ -45,9 +45,13 @@ export const reducer = (
     }
     case fromActions.ADD_AUTHORIZED_PEER: {
       const { authorizedPeers } = state;
+      const {
+        bobVerifyingKey,
+        connection: { peer },
+      } = action.payload;
       return {
         ...state,
-        authorizedPeers: authorizedPeers.add(action.payload.peer),
+        authorizedPeers: authorizedPeers.set(peer, bobVerifyingKey),
       };
     }
     case fromActions.SYNC_DOCUMENT_WITH_CURRENT_SLATE_DATA: {

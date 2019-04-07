@@ -130,6 +130,11 @@ export interface RejectConnectionPayload {
   connection: Peer.DataConnection;
 }
 
+export interface AddAuthorizedPeerPayload {
+  connection: Peer.DataConnection;
+  bobVerifyingKey: string;
+}
+
 export const Actions = {
   setDocumentID: (documentID: string) =>
     createAction(SET_DOCUMENT_ID, documentID),
@@ -187,8 +192,8 @@ export const Actions = {
   ) => createAction(AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN, payload),
   authenticatePeer: (payload: AuthorizePeerPayload) =>
     createAction(AUTHORIZE_PEER, payload),
-  addAuthorizedPeer: (connection: Peer.DataConnection) =>
-    createAction(ADD_AUTHORIZED_PEER, connection),
+  addAuthorizedPeer: (payload: AddAuthorizedPeerPayload) =>
+    createAction(ADD_AUTHORIZED_PEER, payload),
   sendChangesToPeers: (payload: SendChangesToPeersPayload) =>
     createAction(SEND_CHANGES_TO_PEERS, payload),
   rejectConnection: (payload: RejectConnectionPayload) =>

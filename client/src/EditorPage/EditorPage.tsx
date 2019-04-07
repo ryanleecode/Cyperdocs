@@ -66,7 +66,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
 
   private self!: Peer;
 
-  private authPollingTimer: Observable<number> = timer(0, 60000);
+  private authPollingTimer: Observable<number> = timer(0, 5000);
 
   private subscription?: Subscription;
 
@@ -80,6 +80,13 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     };
   }
 
+  public componentWillUnmount(): void {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+      this.subscription = undefined;
+    }
+  }
+
   public componentDidMount(): void {
     const {
       loadDocumentFromSwarm,
@@ -90,10 +97,19 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       role,
     } = this.props;
 
-    this.subscription = this.authPollingTimer.subscribe(() => {
-      const { authentications } = this.props;
-      // authentications.forEach(() => {})
-    });
+    if (role === 'Alice') {
+      this.subscription = this.authPollingTimer.subscribe(() => {
+        const { authorizedPeers } = this.props;
+        const { peers } = this.state;
+        peers.forEach((conn) => {
+          const bobVerifyingKey = authorizedPeers.get(conn!!.peer);
+          sendAuthenticationTokenToPeer({
+            bobVerifyingKey,
+            connection: conn!!,
+          });
+        });
+      });
+    }
 
     const documentID = this.props.history.location.pathname.match(
       /[^/]*$/g,
@@ -368,6 +384,9 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       requestGrantFromAlice,
       authenticateWithDecryptedAuthenticationToken,
       setDocumentData,
+      sendIdentity,
+      setSlateRepr,
+      syncDocumentWithCurrentSlateData,
     } = this.props;
     connection.on(
       'data',
@@ -393,6 +412,15 @@ class EditorPage extends Component<EditorPageProps, AppState> {
               peers: this.state.peers.remove(connection),
               isBobConnectingToAlice: false,
             });
+            const { role } = this.props;
+            const initialValueJSON =
+              role === 'Alice'
+                ? (initialValueAlice as any)
+                : (initialValueBob as any);
+            const initialValue = Value.fromJSON(initialValueJSON);
+
+            setSlateRepr(initialValue);
+            syncDocumentWithCurrentSlateData();
             break;
           }
           case 'BAD_AUTHORIZATION': {
@@ -403,6 +431,15 @@ class EditorPage extends Component<EditorPageProps, AppState> {
               isBobConnectingToAlice: false,
             });
             this.connectToAlice(connection.peer);
+            const { role } = this.props;
+            const initialValueJSON =
+              role === 'Alice'
+                ? (initialValueAlice as any)
+                : (initialValueBob as any);
+            const initialValue = Value.fromJSON(initialValueJSON);
+
+            setSlateRepr(initialValue);
+            syncDocumentWithCurrentSlateData();
             break;
           }
           case 'CHANGE': {
@@ -434,11 +471,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
               data.policyEncryptingKey,
               data.aliceVerifyingKey,
             );
-            connection.on('close', async () =>
-              this.connectToAlice(connection.peer),
-            );
-
-            connection.close();
+            sendIdentity({ connection });
             break;
           }
           case 'SEND_ENCRYPTED_TOKEN_MESSAGE': {
@@ -448,15 +481,18 @@ class EditorPage extends Component<EditorPageProps, AppState> {
                 label: data.label,
                 connection,
               });
+              break;
+            }
+            const aliceVerifyingKey = sessionStorage.getItem(
+              policyEncryptingKey,
+            );
+            if (!aliceVerifyingKey) {
               requestGrantFromAlice({
                 label: data.label,
                 connection,
               });
               break;
             }
-            const aliceVerifyingKey = sessionStorage.getItem(
-              policyEncryptingKey,
-            )!!;
 
             authenticateWithDecryptedAuthenticationToken({
               label: data.label,
