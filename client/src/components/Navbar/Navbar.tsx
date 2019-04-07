@@ -130,7 +130,6 @@ class Navbar extends React.Component<Props, State> {
               style={{ alignItems: 'flex-start' }}
             >
               <NavBootstrapDropdown title="Tools" id="basic-nav-dropdown">
-                <NavBootstrapDropdown.Item>Action</NavBootstrapDropdown.Item>
                 {role === 'Alice' && (
                   <React.Fragment>
                     <NavBootstrapDropdown.Item
