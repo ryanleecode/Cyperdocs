@@ -1,6 +1,5 @@
 import automerge from 'automerge';
-import { stat } from 'fs';
-import { Map, Set } from 'immutable';
+import { List, Map, Set } from 'immutable';
 import { Value } from 'slate';
 import {
   applyAutomergeOperations,
@@ -28,6 +27,7 @@ export const initialState = {
   isLoading: false,
   authorizedPeers: Map<string, BobVerifyingKey>(),
   authentications: Map<BobVerifyingKey, Token>(),
+  peersToKick: List<string>(),
 };
 export type State = typeof initialState;
 
@@ -36,10 +36,14 @@ export const reducer = (
   action: fromActions.Actions,
 ): State => {
   switch (action.type) {
+    case fromActions.RESET_PEERS_TO_KICK: {
+      return { ...state, peersToKick: List() };
+    }
     case fromActions.KICK_PEER: {
       return {
         ...state,
         authorizedPeers: state.authorizedPeers.remove(action.payload.peerID),
+        peersToKick: state.peersToKick.push(action.payload.peerID),
       };
     }
     case fromActions.AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN:

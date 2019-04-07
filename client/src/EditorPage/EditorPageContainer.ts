@@ -12,6 +12,7 @@ export const mapStateToProps = (state: AppState) => ({
   role: state.role.role,
   label: state.document.documentID,
   authorizedPeers: state.document.authorizedPeers,
+  peersToKick: state.document.peersToKick,
 });
 
 export const mapDispatchToProps = {
@@ -38,6 +39,7 @@ export const mapDispatchToProps = {
   sendChangesToPeers: DocumentActions.sendChangesToPeers,
   rejectConnection: DocumentActions.rejectConnection,
   removeAuthorizedPeer: DocumentActions.removeAuthorizedPeer,
+  resetPeersToKick: DocumentActions.resetPeersToKick,
 };
 
 export default connect(

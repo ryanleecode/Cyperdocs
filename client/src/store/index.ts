@@ -16,6 +16,7 @@ const documentPersistConfig = {
     'authentications',
     'authorizedPeers',
     'isLoading',
+    'peersToKick',
   ],
 };
 

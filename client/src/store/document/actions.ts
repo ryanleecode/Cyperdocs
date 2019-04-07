@@ -51,6 +51,7 @@ export const REMOVE_AUTHORIZED_PEER = 'REMOVE_AUTHORIZED_PEER';
 export const INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES =
   'INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES';
 export const KICK_PEER = 'KICK_PEER';
+export const RESET_PEERS_TO_KICK = 'RESET_PEERS_TO_KICK';
 
 export interface EncryptedData {
   result: {
@@ -210,6 +211,7 @@ export const Actions = {
   initializeSwarmDocumnentWithDefaultValues: () =>
     createAction(INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES),
   kickPeer: (payload: KickPeerPayload) => createAction(KICK_PEER, payload),
+  resetPeersToKick: () => createAction(RESET_PEERS_TO_KICK),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;
