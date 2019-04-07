@@ -20,6 +20,7 @@ import Immutable, { Set } from 'immutable';
 import Peer from 'peerjs';
 import React, { Component } from 'react';
 import injectSheet, { WithSheet } from 'react-jss';
+import LoadingOverlay from 'react-loading-overlay';
 import { RouteComponentProps } from 'react-router';
 import { Operation, Value } from 'slate';
 import Swal from 'sweetalert2';
@@ -37,11 +38,17 @@ const styles = (theme: typeof Theme) => ({
   editor: {
     height: '100%',
   },
+  loadingOverlay: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
 });
 
 interface AppState {
   peers: Set<Peer.DataConnection>;
   connectingPeerID: string;
+  isBobConnectingToAlice: boolean;
 }
 
 type EditorPageActions = typeof mapDispatchToProps;
@@ -64,6 +71,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     this.state = {
       connectingPeerID: '',
       peers: Set(),
+      isBobConnectingToAlice: false,
     };
   }
 
@@ -226,34 +234,43 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   }
 
   public render(): JSX.Element {
-    const { connectingPeerID, peers } = this.state;
-    const { classes, slateRepr, isLoading, role, sendIdentity } = this.props;
+    const { connectingPeerID, peers, isBobConnectingToAlice } = this.state;
+    const { classes, slateRepr, isLoading, role } = this.props;
     return (
-      <div className={classes.page}>
-        <Navbar />
-        {role === 'Bob' && peers.size === 0 && (
-          <React.Fragment>
-            <input
-              onChange={(e) => {
-                this.setState({ connectingPeerID: e.target.value });
-              }}
-            />
-            <button onClick={() => this.connectToAlice(connectingPeerID)}>
-              Connect
-            </button>
-          </React.Fragment>
+      <React.Fragment>
+        {role === 'Bob' && peers.size > 0 && isBobConnectingToAlice && (
+          <LoadingOverlay
+            className={classes.loadingOverlay}
+            active={true}
+            spinner
+            text={`Connecting to Alice...`}
+          />
         )}
-
-        <Editor
-          isLoading={isLoading}
-          className={classes.editor}
-          value={slateRepr}
-          onChange={({ value, operations }) => {
-            return this.onChange({ value, operations });
-          }}
-          applyInset={true}
-        />
-      </div>
+        <div className={classes.page}>
+          <Navbar />
+          {role === 'Bob' && peers.size === 0 && (
+            <React.Fragment>
+              <input
+                onChange={(e) => {
+                  this.setState({ connectingPeerID: e.target.value });
+                }}
+              />
+              <button onClick={() => this.connectToAlice(connectingPeerID)}>
+                Connect
+              </button>
+            </React.Fragment>
+          )}
+          <Editor
+            isLoading={role === 'Alice' ? isLoading : false}
+            className={classes.editor}
+            value={slateRepr}
+            onChange={({ value, operations }) => {
+              return this.onChange({ value, operations });
+            }}
+            applyInset={true}
+          />
+        </div>
+      </React.Fragment>
     );
   }
 
@@ -261,7 +278,13 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     const { sendChangesToPeers } = this.props;
     const previousDoc = prevProps.data;
     const currentDoc = this.props.data;
-    const { peers } = this.state;
+    const { peers, isBobConnectingToAlice } = this.state;
+
+    if (peers.size === 0 && isBobConnectingToAlice) {
+      this.setState({
+        isBobConnectingToAlice: false,
+      });
+    }
 
     try {
       const changes = automerge.getChanges(previousDoc, currentDoc);
@@ -318,6 +341,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
         const { peers } = this.state;
         this.setState({
           peers: peers.add(connection),
+          isBobConnectingToAlice: true,
         });
         sendIdentity({ connection });
         this.addBobHandlersToConnection(connection);
@@ -355,6 +379,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             connection.close();
             this.setState({
               peers: this.state.peers.remove(connection),
+              isBobConnectingToAlice: false,
             });
             break;
           }
@@ -363,6 +388,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             connection.close();
             this.setState({
               peers: Set(),
+              isBobConnectingToAlice: false,
             });
             this.connectToAlice(connection.peer);
             break;
@@ -384,6 +410,10 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             const doc = JSON.parse(data.initialState);
             const newDoc = automerge.applyChanges(automerge.init(), doc);
             setDocumentData(newDoc);
+
+            this.setState({
+              isBobConnectingToAlice: false,
+            });
             break;
           }
           case 'ISSUE_GRANT_MESSAGE': {
