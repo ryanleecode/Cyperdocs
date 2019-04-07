@@ -156,7 +156,7 @@ const logRetrievalCountEpic = (
     map(() => fromActions.Actions.tryFetchDocumentFromSwarm(0)),
   );
 
-const MAX_DOCUMENT_FETCH_ATTEMPTS = 5;
+const MAX_DOCUMENT_FETCH_ATTEMPTS = 7;
 const REQUIRED_NUMBER_OF_FETCHES = 5;
 
 const fetchDocumentEpic = (
@@ -190,7 +190,7 @@ const fetchDocumentEpic = (
             return throwError(error);
           }
           return of(undefined).pipe(
-            delay(1000),
+            delay(2000),
             map(() =>
               fromActions.Actions.tryFetchDocumentFromSwarm(action.payload + 1),
             ),
@@ -656,6 +656,52 @@ const initializeSwarmDocumentWithInitialValuesEpic = (
     }),
   );
 
+const saveDocumentToSwarm = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.SAVE_DOCUMENT_TO_SWARM),
+    flatMap(() => {
+      const {
+        document: { swarmPrivateKey, documentID, enricoBaseURL },
+      } = state$.value;
+      const currentDoc = state$.value.document.data;
+      const serializedDoc = automerge.save(currentDoc);
+
+      const keyPair = createKeyPair(swarmPrivateKey);
+      const signBytes = async (bytes: number[]) =>
+        sign(bytes, keyPair.getPrivate());
+      const bzz = new BzzAPI({
+        url: BZZ_URL,
+        signBytes,
+      });
+
+      return http
+        .post<EncryptedData>(`${enricoBaseURL}/encrypt_message`, {
+          message: serializedDoc,
+        })
+        .pipe(
+          flatMap((encryptedData) => {
+            return from(
+              bzz.uploadFeedValue(
+                documentID,
+                {
+                  'index.html': {
+                    contentType: 'application/json',
+                    data: JSON.stringify(encryptedData),
+                  },
+                },
+                {
+                  defaultPath: 'index.html',
+                },
+              ),
+            ).pipe(map(() => fromActions.Actions.previousActionCompleted()));
+          }),
+        );
+    }),
+  );
+
 export const epic = combineEpics(
   setDocumentIDEpic,
   createNewDocumentEpic,
@@ -676,4 +722,5 @@ export const epic = combineEpics(
   sendChangesToPeersEpic,
   rejectConnectionEpic,
   initializeSwarmDocumentWithInitialValuesEpic,
+  saveDocumentToSwarm,
 );

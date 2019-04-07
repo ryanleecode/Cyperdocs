@@ -72,7 +72,11 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       1000,
   );
 
-  private subscription?: Subscription;
+  private savePollingTimer: Observable<number> = timer(0, 10000);
+
+  private authSub?: Subscription;
+
+  private saveSub?: Subscription;
 
   constructor(props: any) {
     super(props);
@@ -85,9 +89,14 @@ class EditorPage extends Component<EditorPageProps, AppState> {
   }
 
   public componentWillUnmount(): void {
-    if (this.subscription) {
-      this.subscription.unsubscribe();
-      this.subscription = undefined;
+    if (this.authSub) {
+      this.authSub.unsubscribe();
+      this.authSub = undefined;
+    }
+
+    if (this.saveSub) {
+      this.saveSub.unsubscribe();
+      this.saveSub = undefined;
     }
   }
 
@@ -99,10 +108,11 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       setSlateRepr,
       rejectConnection,
       role,
+      saveDocumentToSwarm,
     } = this.props;
 
     if (role === 'Alice') {
-      this.subscription = this.authPollingTimer.subscribe(() => {
+      this.authSub = this.authPollingTimer.subscribe(() => {
         const { authorizedPeers } = this.props;
         const { peers } = this.state;
         peers.forEach((conn) => {
@@ -114,6 +124,12 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             });
           }
         });
+      });
+      this.saveSub = this.savePollingTimer.subscribe(() => {
+        const { isLoading } = this.props;
+        if (!isLoading) {
+          saveDocumentToSwarm();
+        }
       });
     }
 

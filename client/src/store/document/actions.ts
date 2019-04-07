@@ -52,6 +52,7 @@ export const INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES =
   'INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES';
 export const KICK_PEER = 'KICK_PEER';
 export const RESET_PEERS_TO_KICK = 'RESET_PEERS_TO_KICK';
+export const SAVE_DOCUMENT_TO_SWARM = 'SAVE_DOCUMENT_TO_SWARM';
 
 export interface EncryptedData {
   result: {
@@ -212,6 +213,7 @@ export const Actions = {
     createAction(INITIALIZE_SWARM_DOCUMENT_WITH_DEFAULT_VALUES),
   kickPeer: (payload: KickPeerPayload) => createAction(KICK_PEER, payload),
   resetPeersToKick: () => createAction(RESET_PEERS_TO_KICK),
+  saveDocumentToSwarm: () => createAction(SAVE_DOCUMENT_TO_SWARM),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;

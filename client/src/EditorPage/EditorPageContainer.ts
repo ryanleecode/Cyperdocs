@@ -40,6 +40,7 @@ export const mapDispatchToProps = {
   rejectConnection: DocumentActions.rejectConnection,
   removeAuthorizedPeer: DocumentActions.removeAuthorizedPeer,
   resetPeersToKick: DocumentActions.resetPeersToKick,
+  saveDocumentToSwarm: DocumentActions.saveDocumentToSwarm,
 };
 
 export default connect(
