@@ -389,7 +389,7 @@ const issueGrantEpic = (
             m: 1,
             n: 1,
             label,
-            expiration: moment().add(30, 'seconds'),
+            expiration: moment().add(10, 'seconds'),
           })
           .pipe(
             map(
@@ -493,14 +493,22 @@ const authorizePeerEpic = (
   action$.pipe(
     ofType(fromActions.AUTHORIZE_PEER),
     map(({ payload: { decryptedToken, bobVerifyingKey, connection } }) => {
-      const { authentications, documentID } = state$.value.document;
+      const {
+        authentications,
+        documentID,
+        authorizedPeers,
+      } = state$.value.document;
       const storedToken = authentications.get(bobVerifyingKey);
 
       if (storedToken === decryptedToken) {
-        return fromActions.Actions.addAuthorizedPeer({
-          connection,
-          bobVerifyingKey,
-        });
+        if (!authorizedPeers.has(connection.peer)) {
+          return fromActions.Actions.addAuthorizedPeer({
+            connection,
+            bobVerifyingKey,
+          });
+        } else {
+          return fromActions.Actions.previousActionCompleted();
+        }
       } else {
         const message: BadAuthorizationMessage = {
           type: 'BAD_AUTHORIZATION',

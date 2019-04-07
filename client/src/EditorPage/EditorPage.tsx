@@ -102,11 +102,13 @@ class EditorPage extends Component<EditorPageProps, AppState> {
         const { authorizedPeers } = this.props;
         const { peers } = this.state;
         peers.forEach((conn) => {
-          const bobVerifyingKey = authorizedPeers.get(conn!!.peer);
-          sendAuthenticationTokenToPeer({
-            bobVerifyingKey,
-            connection: conn!!,
-          });
+          if (conn!!.open) {
+            const bobVerifyingKey = authorizedPeers.get(conn!!.peer);
+            sendAuthenticationTokenToPeer({
+              bobVerifyingKey,
+              connection: conn!!,
+            });
+          }
         });
       });
     }
