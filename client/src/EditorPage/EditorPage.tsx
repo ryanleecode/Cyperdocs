@@ -21,6 +21,7 @@ import React, { Component } from 'react';
 import injectSheet, { WithSheet } from 'react-jss';
 import { RouteComponentProps } from 'react-router';
 import { Operation, Value } from 'slate';
+import Swal from 'sweetalert2';
 import Editor from './Editor';
 import { mapDispatchToProps, mapStateToProps } from './EditorPageContainer';
 import { initialValue as initialValueBob } from './initial-value.bob';
@@ -105,7 +106,6 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     } = this.props;
 
     this.self.on('open', (peerID) => {
-      console.log(peerID);
       setPeerID(peerID);
     });
     this.self.on('connection', (conn) => {
@@ -136,11 +136,25 @@ class EditorPage extends Component<EditorPageProps, AppState> {
               break;
             }
             case 'REQUEST_GRANT_MESSAGE': {
-              issueGrant({
-                label: data.label,
-                bobEncryptingKey: data.bob.encryptingKey,
-                bobVerifyingKey: data.bob.verifyingKey,
-                connection: conn,
+              Swal.fire({
+                position: 'top-end',
+                type: 'info',
+                title: 'Incoming Connection',
+                html: `Bob is trying to connect.<br />Verifying Key: <code>${
+                  data.bob.verifyingKey
+                }</code>`,
+                showConfirmButton: true,
+                showCancelButton: true,
+                backdrop: false,
+              }).then((result) => {
+                if (result.value) {
+                  issueGrant({
+                    label: data.label,
+                    bobEncryptingKey: data.bob.encryptingKey,
+                    bobVerifyingKey: data.bob.verifyingKey,
+                    connection: conn,
+                  });
+                }
               });
               break;
             }
@@ -326,6 +340,9 @@ class EditorPage extends Component<EditorPageProps, AppState> {
           case 'BAD_AUTHORIZATION': {
             localStorage.removeItem(data.label);
             connection.close();
+            this.setState({
+              peers: Map(),
+            });
             this.connectToAlice(connection.peer);
             break;
           }
