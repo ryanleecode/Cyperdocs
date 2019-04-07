@@ -35,6 +35,7 @@ export const mapDispatchToProps = {
     DocumentActions.authenticateWithDecryptedAuthenticationToken,
   authenticatePeer: DocumentActions.authenticatePeer,
   sendChangesToPeers: DocumentActions.sendChangesToPeers,
+  rejectConnection: DocumentActions.rejectConnection,
 };
 
 export default connect(

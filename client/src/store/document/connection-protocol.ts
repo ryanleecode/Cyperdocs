@@ -55,3 +55,7 @@ export interface BadAuthorizationMessage {
   type: 'BAD_AUTHORIZATION';
   label: string;
 }
+
+export interface RejectConnectionMessage {
+  type: 'REJECT_CONNECTION';
+}

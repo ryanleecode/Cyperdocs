@@ -29,6 +29,7 @@ import {
   ChangeMessage,
   InitialStateMessage,
   IssueGrantMessage,
+  RejectConnectionMessage,
   RequestGrantMessage,
   RequestUpdatedDocumentFromPeerMessage,
   SendEncryptedTokenMessage,
@@ -267,7 +268,6 @@ const checkIfRemoteDocumentHashMatchesAfterChangesEpic = (
       return of({ remoteHash, connection });
     }),
     map(({ remoteHash, connection }) => {
-      const peerID = state$.value.document.peerID;
       const { slateRepr } = state$.value.document;
       const currentHash = createHash('sha256')
         .update(JSON.stringify(slateRepr.toJSON()))
@@ -471,6 +471,14 @@ const sendDecryptedAuthenticationTokenEpic = (
 
                   return fromActions.Actions.sentMessageOverWebsocket(message);
                 }),
+                catchError(() =>
+                  of(
+                    fromActions.Actions.requestGrantFromAlice({
+                      label,
+                      connection,
+                    }),
+                  ),
+                ),
               );
           }),
         );
@@ -541,15 +549,33 @@ const sendChangesToPeersEpic = (
         slateHash,
       };
 
-      peers.keySeq().forEach((peerID) => {
-        if (role === 'Alice' && !authorizedPeers.contains(peerID || '')) {
+      peers.keySeq().forEach((connection) => {
+        if (!connection) {
           return;
         }
-        const connection = peers.get(peerID!);
+        if (role === 'Alice' && !authorizedPeers.contains(connection.peer)) {
+          return;
+        }
         connection.send(changeMessage);
       });
 
       return fromActions.Actions.sentMessageOverWebsocket(changeMessage);
+    }),
+  );
+
+const rejectConnectionEpic = (
+  action$: ActionsObservable<fromActions.Actions>,
+  state$: StateObservable<AppState>,
+) =>
+  action$.pipe(
+    ofType(fromActions.REJECT_CONNECTION),
+    map(({ payload: { connection } }) => {
+      const message: RejectConnectionMessage = {
+        type: 'REJECT_CONNECTION',
+      };
+      connection.send(message);
+
+      return fromActions.Actions.sentMessageOverWebsocket(message);
     }),
   );
 
@@ -571,4 +597,5 @@ export const epic = combineEpics(
   sendDecryptedAuthenticationTokenEpic,
   authorizePeerEpic,
   sendChangesToPeersEpic,
+  rejectConnectionEpic,
 );

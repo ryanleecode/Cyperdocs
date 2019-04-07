@@ -6,6 +6,7 @@ import {
   ChangeMessage,
   InitialStateMessage,
   IssueGrantMessage,
+  RejectConnectionMessage,
   RequestGrantMessage,
   RequestUpdatedDocumentFromPeerMessage,
   SendEncryptedTokenMessage,
@@ -15,7 +16,7 @@ import {
 import { boundMethod } from 'autobind-decorator';
 import automerge from 'automerge';
 import { createHash } from 'crypto';
-import Immutable, { Map } from 'immutable';
+import Immutable, { Set } from 'immutable';
 import Peer from 'peerjs';
 import React, { Component } from 'react';
 import injectSheet, { WithSheet } from 'react-jss';
@@ -39,7 +40,7 @@ const styles = (theme: typeof Theme) => ({
 });
 
 interface AppState {
-  peers: Map<string, Peer.DataConnection>;
+  peers: Set<Peer.DataConnection>;
   connectingPeerID: string;
 }
 
@@ -62,7 +63,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
 
     this.state = {
       connectingPeerID: '',
-      peers: Map(),
+      peers: Set(),
     };
   }
 
@@ -72,6 +73,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       syncDocumentWithCurrentSlateData,
       setDocumentID,
       setSlateRepr,
+      rejectConnection,
       role,
     } = this.props;
 
@@ -110,10 +112,13 @@ class EditorPage extends Component<EditorPageProps, AppState> {
     });
     this.self.on('connection', (conn) => {
       this.setState({
-        peers: this.state.peers.set(conn.peer, conn),
+        peers: this.state.peers.add(conn),
+      });
+      conn.on('error', (msg) => {
+        console.error('connection error', msg);
       });
       conn.on('close', () => {
-        this.setState({ peers: this.state.peers.remove(conn.peer) });
+        this.setState({ peers: this.state.peers.remove(conn) });
       });
       conn.on(
         'data',
@@ -152,6 +157,10 @@ class EditorPage extends Component<EditorPageProps, AppState> {
                     label: data.label,
                     bobEncryptingKey: data.bob.encryptingKey,
                     bobVerifyingKey: data.bob.verifyingKey,
+                    connection: conn,
+                  });
+                } else {
+                  rejectConnection({
                     connection: conn,
                   });
                 }
@@ -205,7 +214,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
                   applyRemoteChangeToLocalDocument(changes);
                 }
               } catch (err) {
-                console.log(err);
+                console.error(err);
               }
             }
             default:
@@ -263,8 +272,6 @@ class EditorPage extends Component<EditorPageProps, AppState> {
           .update(JSON.stringify(slateRepr.toJSON()))
           .digest('base64');
 
-        console.log(peers);
-
         sendChangesToPeers({
           peers,
           changeData,
@@ -310,7 +317,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
         const { sendIdentity } = this.props;
         const { peers } = this.state;
         this.setState({
-          peers: peers.set(connectingPeerID, connection),
+          peers: peers.add(connection),
         });
         sendIdentity({ connection });
         this.addBobHandlersToConnection(connection);
@@ -334,14 +341,28 @@ class EditorPage extends Component<EditorPageProps, AppState> {
           | IssueGrantMessage
           | InitialStateMessage
           | ChangeMessage
-          | BadAuthorizationMessage,
+          | BadAuthorizationMessage
+          | RejectConnectionMessage,
       ) => {
         switch (data.type) {
-          case 'BAD_AUTHORIZATION': {
-            localStorage.removeItem(data.label);
+          case 'REJECT_CONNECTION': {
+            Swal.fire({
+              type: 'warning',
+              title: 'Connection Rejected',
+              html: `The host has rejected your connection or the grant has expired`,
+              showCancelButton: false,
+            });
             connection.close();
             this.setState({
-              peers: Map(),
+              peers: this.state.peers.remove(connection),
+            });
+            break;
+          }
+          case 'BAD_AUTHORIZATION': {
+            sessionStorage.removeItem(data.label);
+            connection.close();
+            this.setState({
+              peers: Set(),
             });
             this.connectToAlice(connection.peer);
             break;
@@ -366,19 +387,20 @@ class EditorPage extends Component<EditorPageProps, AppState> {
             break;
           }
           case 'ISSUE_GRANT_MESSAGE': {
-            localStorage.setItem(data.label, data.policyEncryptingKey);
-            localStorage.setItem(
+            sessionStorage.setItem(data.label, data.policyEncryptingKey);
+            sessionStorage.setItem(
               data.policyEncryptingKey,
               data.aliceVerifyingKey,
             );
             connection.on('close', async () =>
               this.connectToAlice(connection.peer),
             );
+
             connection.close();
             break;
           }
           case 'SEND_ENCRYPTED_TOKEN_MESSAGE': {
-            const policyEncryptingKey = localStorage.getItem(data.label);
+            const policyEncryptingKey = sessionStorage.getItem(data.label);
             if (!policyEncryptingKey) {
               requestGrantFromAlice({
                 label: data.label,
@@ -390,7 +412,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
               });
               break;
             }
-            const aliceVerifyingKey = localStorage.getItem(
+            const aliceVerifyingKey = sessionStorage.getItem(
               policyEncryptingKey,
             )!!;
 

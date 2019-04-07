@@ -1,7 +1,7 @@
 import { ActionsUnion, createAction } from '@martin_hotell/rex-tils';
 import { Doc } from 'automerge';
 import Immutable from 'immutable';
-import { Map } from 'immutable';
+import { Set } from 'immutable';
 import Peer from 'peerjs';
 import { Value } from 'slate';
 import { Operation } from 'slate';
@@ -46,6 +46,7 @@ export const AUTHENTICATE_WITH_DECRYPTED_AUTHENTICATION_TOKEN =
 export const AUTHORIZE_PEER = 'AUTHORIZE_PEER';
 export const ADD_AUTHORIZED_PEER = 'ADD_AUTHORIZED_PEER';
 export const SEND_CHANGES_TO_PEERS = 'SEND_CHANGES_TO_PEERS';
+export const REJECT_CONNECTION = 'REJECT_CONNECTION';
 
 export interface EncryptedData {
   result: {
@@ -119,9 +120,13 @@ export interface AuthorizePeerPayload {
 }
 
 export interface SendChangesToPeersPayload {
-  peers: Map<string, Peer.DataConnection>;
+  peers: Set<Peer.DataConnection>;
   changeData: string;
   slateHash: string;
+}
+
+export interface RejectConnectionPayload {
+  connection: Peer.DataConnection;
 }
 
 export const Actions = {
@@ -185,6 +190,8 @@ export const Actions = {
     createAction(ADD_AUTHORIZED_PEER, connection),
   sendChangesToPeers: (payload: SendChangesToPeersPayload) =>
     createAction(SEND_CHANGES_TO_PEERS, payload),
+  rejectConnection: (payload: RejectConnectionPayload) =>
+    createAction(REJECT_CONNECTION, payload),
 };
 
 export type Actions = ActionsUnion<typeof Actions>;
