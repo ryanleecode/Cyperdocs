@@ -421,6 +421,27 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       setSlateRepr,
       syncDocumentWithCurrentSlateData,
     } = this.props;
+    connection.on('close', () => {
+      Swal.fire({
+        type: 'warning',
+        title: 'Connection Closed',
+        html: `Alice has closed the connection`,
+        showCancelButton: false,
+      });
+      this.setState({
+        peers: this.state.peers.remove(connection),
+        isBobConnectingToAlice: false,
+      });
+      const { role } = this.props;
+      const initialValueJSON =
+        role === 'Alice'
+          ? (initialValueAlice as any)
+          : (initialValueBob as any);
+      const initialValue = Value.fromJSON(initialValueJSON);
+
+      setSlateRepr(initialValue);
+      syncDocumentWithCurrentSlateData();
+    });
     connection.on(
       'data',
       async (
