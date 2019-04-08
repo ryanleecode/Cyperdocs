@@ -30,3 +30,5 @@ Since it is expected the most up to date document will be fetched the most often
 This is not always the case, and I needed to strike a balance between the threshold, so you wouldn't be waiting an eternity for th e document to fetch.
 
 ## Web RTC Nucypher Connection Handshake
+
+![alt text](./NUCYPHER_HANDSHAKE_TECHNICAL_SPEC.png)
