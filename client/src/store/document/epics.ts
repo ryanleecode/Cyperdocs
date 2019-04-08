@@ -95,13 +95,21 @@ const setDocumentIDEpic = (
       const {
         document: { aliceBaseURL, documentID },
       } = state$.value;
-      return http.post<DerivePolicyEncryptingKeyResponse>(
-        `${aliceBaseURL}/derive_policy_encrypting_key/${documentID}`,
-        undefined as any,
-      );
-    }),
-    map(({ result: { policy_encrypting_key } }) => {
-      return fromActions.Actions.setPolicyEncryptingKey(policy_encrypting_key);
+      return http
+        .post<DerivePolicyEncryptingKeyResponse>(
+          `${aliceBaseURL}/derive_policy_encrypting_key/${documentID}`,
+          undefined as any,
+        )
+        .pipe(
+          map(({ result: { policy_encrypting_key } }) => {
+            return fromActions.Actions.setPolicyEncryptingKey(
+              policy_encrypting_key,
+            );
+          }),
+          catchError(() => {
+            return of(fromActions.Actions.previousActionCompleted());
+          }),
+        );
     }),
   );
 
