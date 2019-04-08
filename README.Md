@@ -80,13 +80,23 @@ cp .env.example .env
 
 Paste the url created by ngrok in the field called `REACT_APP_PEER_SERVER_HOST`. You can leave the rest of the parameters as default.
 
+
+##### Development
+
 ```sh
 npm run start
 ```
 
+##### Production
+
+```sh
+npm run build
+serve -s build
+```
+
 ### Running
 
-Navigate to http://localhost:3000
+Navigate to http://localhost:3000 or http://localhost:5000 in production mode.
 
 You should now have the peer server, web client, and nucypher Ursula node running.
 
