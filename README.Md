@@ -6,7 +6,7 @@ I was unable to host an Ursula node without getting <i>Connection Refused</i>, s
 
 ## Demo Video
 
-TODO
+A demostration video of how to install and it how it works can be found [here](https://www.youtube.com/watch?v=o8f9SGw5PrI)!
 
 ## Requirements
 
@@ -104,4 +104,4 @@ You'll now get to choose to be Alice or Bob. For the purposes of peer to peer co
 
 ### Technical Specification
 
-TODO
+The technical specification can be found [here](./TECHNICAL_SPECIFICATION.MD)
