@@ -120,8 +120,11 @@ class AlicePage extends React.Component<Props, State> {
                 an <code>Alice</code> node.
               </Card.Text>
               <Card.Text>
-                This application is compatible with the{' '}
-                <code>0.1.0-alpha.21</code> version of <code>Nucypher</code>.
+                This application is compatible with this{' '}
+                <a href="https://github.com/drdgvhbh/nucypher/tree/hackathon">
+                  fork
+                </a>{' '}
+                of <code>Nucypher</code>.
               </Card.Text>
               <Card.Text>
                 To get started run this command in your local terminal. You will
