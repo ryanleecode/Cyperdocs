@@ -8,6 +8,10 @@ I was unable to host an Ursula node without getting <i>Connection Refused</i>, s
 
 A demostration video of how to install and it how it works can be found [here](https://www.youtube.com/watch?v=o8f9SGw5PrI)!
 
+### Technical Specification
+
+The technical specification can be found [here](./TECHNICAL_SPECIFICATION.MD)
+
 ## Requirements
 
 * Node v10+
@@ -102,6 +106,3 @@ You should now have the peer server, web client, and nucypher Ursula node runnin
 
 You'll now get to choose to be Alice or Bob. For the purposes of peer to peer communicate. Simply open another tab and choose the other respective character. From the browser's point of view, both your tabs will be considered peers, even though you're on the same computer of course.
 
-### Technical Specification
-
-The technical specification can be found [here](./TECHNICAL_SPECIFICATION.MD)
