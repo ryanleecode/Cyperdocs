@@ -5,7 +5,9 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "start": "nodemon"
+        "start": "nodemon",
+        "build": "tsc",
+        "host": "DEBUG='app' node build/server.js"
     },
     "keywords": [],
     "author": "",
