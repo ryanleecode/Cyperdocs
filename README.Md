@@ -86,7 +86,7 @@ npm run start
 
 ### Running
 
-Navigate to localhost:3000
+Navigate to http://localhost:3000
 
 You should now have the peer server, web client, and nucypher Ursula node running.
 
