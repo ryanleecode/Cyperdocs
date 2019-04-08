@@ -72,7 +72,7 @@ class EditorPage extends Component<EditorPageProps, AppState> {
       1000,
   );
 
-  private savePollingTimer: Observable<number> = timer(0, 10000);
+  private savePollingTimer: Observable<number> = timer(0, 5000);
 
   private authSub?: Subscription;
 
@@ -126,8 +126,8 @@ class EditorPage extends Component<EditorPageProps, AppState> {
         });
       });
       this.saveSub = this.savePollingTimer.subscribe(() => {
-        const { isLoading } = this.props;
-        if (!isLoading) {
+        const { isLoading, isSavingDocumentToSwarm } = this.props;
+        if (!isLoading && !isSavingDocumentToSwarm) {
           saveDocumentToSwarm();
         }
       });

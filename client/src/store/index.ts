@@ -17,6 +17,7 @@ const documentPersistConfig = {
     'authorizedPeers',
     'isLoading',
     'peersToKick',
+    'isSavingDocumentToSwarm',
   ],
 };
 

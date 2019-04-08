@@ -13,6 +13,7 @@ export const mapStateToProps = (state: AppState) => ({
   label: state.document.documentID,
   authorizedPeers: state.document.authorizedPeers,
   peersToKick: state.document.peersToKick,
+  isSavingDocumentToSwarm: state.document.isSavingDocumentToSwarm,
 });
 
 export const mapDispatchToProps = {

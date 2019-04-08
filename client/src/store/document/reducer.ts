@@ -28,6 +28,7 @@ export const initialState = {
   authorizedPeers: Map<string, BobVerifyingKey>(),
   authentications: Map<BobVerifyingKey, Token>(),
   peersToKick: List<string>(),
+  isSavingDocumentToSwarm: false,
 };
 export type State = typeof initialState;
 
@@ -36,6 +37,12 @@ export const reducer = (
   action: fromActions.Actions,
 ): State => {
   switch (action.type) {
+    case fromActions.SAVE_DOCUMENT_TO_SWARM: {
+      return { ...state, isSavingDocumentToSwarm: true };
+    }
+    case fromActions.FINISH_SAVING_DOC_TO_SWARM: {
+      return { ...state, isSavingDocumentToSwarm: false };
+    }
     case fromActions.RESET_PEERS_TO_KICK: {
       return { ...state, peersToKick: List() };
     }

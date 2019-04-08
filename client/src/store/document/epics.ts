@@ -72,6 +72,7 @@ const BZZ_URL = 'https://swarm-gateways.net';
 
 const http = new Rxios({
   headers: { 'Cache-Control': 'no-cache' },
+  timeout: 5000,
 });
 
 interface DerivePolicyEncryptingKeyResponse {
@@ -145,7 +146,12 @@ const startLoadingDocumentFromSwarmEpic = (
 ) =>
   action$.pipe(
     ofType(fromActions.LOAD_DOCUMENT_FROM_SWARM),
-    map(() => fromActions.Actions.tryFetchDocumentFromSwarm(0)),
+    flatMap(() =>
+      of(
+        fromActions.Actions.tryFetchDocumentFromSwarm(0),
+        fromActions.Actions.tryFetchDocumentFromSwarm(1),
+      ),
+    ),
   );
 
 const logRetrievalCountEpic = (
@@ -156,7 +162,7 @@ const logRetrievalCountEpic = (
     map(() => fromActions.Actions.tryFetchDocumentFromSwarm(0)),
   );
 
-const MAX_DOCUMENT_FETCH_ATTEMPTS = 7;
+const MAX_DOCUMENT_FETCH_ATTEMPTS = 20;
 const REQUIRED_NUMBER_OF_FETCHES = 5;
 
 const fetchDocumentEpic = (
@@ -171,15 +177,24 @@ const fetchDocumentEpic = (
       } = state$.value;
 
       return http.get<EncryptedData>(`${BZZ_URL}/bzz:/${documentID}`).pipe(
-        map((encryptedData) => {
+        flatMap((encryptedData) => {
           const hash = crypto
             .createHash('sha256')
             .update(JSON.stringify(encryptedData))
             .digest('base64');
           if (retrievalCounts.get(hash, 0) >= REQUIRED_NUMBER_OF_FETCHES) {
-            return fromActions.Actions.consumeFetchedDocument(encryptedData);
+            return state$.pipe(
+              flatMap(({ document: { isLoading } }) => {
+                if (!isLoading) {
+                  return of(fromActions.Actions.previousActionCompleted());
+                }
+                return of(
+                  fromActions.Actions.consumeFetchedDocument(encryptedData),
+                );
+              }),
+            );
           } else {
-            return fromActions.Actions.logRetrievalCount(hash);
+            return of(fromActions.Actions.logRetrievalCount(hash));
           }
         }),
         catchError((error) => {
@@ -190,9 +205,13 @@ const fetchDocumentEpic = (
             return throwError(error);
           }
           return of(undefined).pipe(
-            delay(2000),
-            map(() =>
-              fromActions.Actions.tryFetchDocumentFromSwarm(action.payload + 1),
+            delay(250),
+            flatMap(() =>
+              of(
+                fromActions.Actions.tryFetchDocumentFromSwarm(
+                  action.payload + 1,
+                ),
+              ),
             ),
           );
         }),
@@ -208,8 +227,9 @@ const consumeFetchedDocumentEpic = (
     ofType(fromActions.CONSUME_FETCHED_DOCUMENT),
     flatMap(({ payload: encryptedData }) => {
       const {
-        document: { fakeBobBaseURL, aliceBaseURL, documentID },
+        document: { fakeBobBaseURL, aliceBaseURL, documentID, isLoading },
       } = state$.value;
+
       return http
         .get<BobPublicKeys>(`${fakeBobBaseURL}/public_keys`)
         .pipe(
@@ -234,21 +254,24 @@ const consumeFetchedDocumentEpic = (
                 policy_encrypting_key: alicePolicyEncryptingKey,
               },
             }) => {
-              return http.post<BobRetrieve>(`${fakeBobBaseURL}/retrieve`, {
-                label: documentID,
-                policy_encrypting_key: alicePolicyEncryptingKey,
-                alice_verifying_key: aliceVerifyingKey,
-                message_kit: encryptedData.result.message_kit,
-              });
+              return http
+                .post<BobRetrieve>(`${fakeBobBaseURL}/retrieve`, {
+                  label: documentID,
+                  policy_encrypting_key: alicePolicyEncryptingKey,
+                  alice_verifying_key: aliceVerifyingKey,
+                  message_kit: encryptedData.result.message_kit,
+                })
+                .pipe(
+                  map((bobRetrieve) => bobRetrieve.result.cleartexts[0]),
+                  map((clearText) => {
+                    const newDoc = automerge.load(clearText);
+
+                    return fromActions.Actions.setDocumentData(newDoc);
+                  }),
+                );
             },
           ),
         );
-    }),
-    map((bobRetrieve) => bobRetrieve.result.cleartexts[0]),
-    map((clearText) => {
-      const newDoc = automerge.load(clearText);
-
-      return fromActions.Actions.setDocumentData(newDoc);
     }),
   );
 
@@ -664,7 +687,12 @@ const saveDocumentToSwarm = (
     ofType(fromActions.SAVE_DOCUMENT_TO_SWARM),
     flatMap(() => {
       const {
-        document: { swarmPrivateKey, documentID, enricoBaseURL },
+        document: {
+          swarmPrivateKey,
+          documentID,
+          enricoBaseURL,
+          isSavingDocumentToSwarm,
+        },
       } = state$.value;
       const currentDoc = state$.value.document.data;
       const serializedDoc = automerge.save(currentDoc);
@@ -696,7 +724,16 @@ const saveDocumentToSwarm = (
                   defaultPath: 'index.html',
                 },
               ),
-            ).pipe(map(() => fromActions.Actions.previousActionCompleted()));
+            ).pipe(
+              flatMap(() =>
+                of(fromActions.Actions.finishSavingDocumentToSwarm()),
+              ),
+              catchError((err) => {
+                console.error(err);
+
+                return of(fromActions.Actions.finishSavingDocumentToSwarm());
+              }),
+            );
           }),
         );
     }),
