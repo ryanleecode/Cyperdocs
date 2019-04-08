@@ -353,15 +353,20 @@ class AlicePage extends React.Component<Props, State> {
 
   @autobind
   private async onAliceTestURL(): Promise<void> {
-    const { aliceBaseURL } = this.props;
-    await this.testURL(
+    const { aliceBaseURL, setDocumentID } = this.props;
+    const { documentIdentifier } = this.props;
+    const result = await this.testURL(
       `${aliceBaseURL}/derive_policy_encrypting_key/${nanoid(26)}`,
       'post',
       'Alice',
     );
-    this.setState({
-      isAliceNodeTested: true,
-    });
+    if (result) {
+      setDocumentID(documentIdentifier);
+      this.setState({
+        isAliceNodeTested: true,
+      });
+    }
+
     this.setEnricoVisibilityConditionally();
   }
 
