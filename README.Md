@@ -1,6 +1,6 @@
 # CypherDocs
 
-Cypherdocs is a peer-to-peer document editing collaboration tool. Documents are encrypted using `Nucypher` and are uploaded to [Swarm](https://swarm-gateways.net/). However, primarily, Cypherdocs uses `Nucypher` to secure Web3RTC websocket connection between its peers using a self devised handshake protocol.
+Cypherdocs is a peer-to-peer document editing collaboration tool. Documents are encrypted using `Nucypher` and are uploaded to [Swarm](https://swarm-gateways.net/). However, primarily, Cypherdocs uses `Nucypher` to secure WebRTC websocket connection between its peers using a self devised handshake protocol.
 
 I was unable to host an Ursula node without getting <i>Connection Refused</i>, so this project can only be run locally, unfortunately.
 
