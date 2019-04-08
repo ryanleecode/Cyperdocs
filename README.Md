@@ -1,75 +1,97 @@
-# CYPHERDOCS
+# CypherDocs
+
+Cypherdocs is a peer-to-peer document editing collaboration tool. Documents are encrypted using `Nucypher` and are uploaded to [Swarm](https://swarm-gateways.net/). However, primarily, Cypherdocs uses `Nucypher` to secure Web3RTC websocket connection between its peers using a self devised handshake protocol.
+
+I was unable to host an Ursula node without getting <i>Connection Refused</i>, so this project can only be run locally, unfortunately.
+
+## Demo Video
+
+TODO
+
+## Requirements
+
+* Node v10+
+* Pipenv
 
 ## Installation
 
-### Download Ngrok
+### Install Nucypher Fork
 
-[Ngrok](https://ngrok.com/) is a tool to expose your locally running server on https to the outside world.
+The fork adds the following features
 
-### Start the Peer Server
+* Enables CORs support, so my browser can talk to the nodes
+* Makes the expiration date on grants actually work
+* Allows Bob to retrieve multiple times
+
+```sh
+git clone https://github.com/drdgvhbh/nucypher.git
+cd nucypher
+pipenv install
+pipenv shell
+pipenv run install-solc
+pip3 install .
+```
+
+Start the Ursula Node.
+
+```sh
+nucypher ursula run --federated-only --dev
+```
+
+### Clone This Repo
+
+```sh
+git clone https://github.com/drdgvhbh/nucypher-hackathon.git
+cd nucypher-hackathon
+```
+
+#### Start the Peer Server
+
+This server is basically the stun/turn/signalling server for Web RTC. You can read more about it [here](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Signaling_and_video_calling#The_signaling_server).
 
 ```sh
 cd server
-npm run start
+npm install
+npm run build
+npm run host
+```
 
-ngrok http 6666 # Expose endpoint on https
+#### Use Ngrok
+
+We'll need an `https` address to use this application. Go ahead and install [Ngrok](https://ngrok.com/) so you can expose your local server as https.
+
+Once installed run
+
+```sh
+ngrok http 6666
 ```
 
 Copy the https url created by ngrok. For example `https://28749c87.ngrok.io`.
 
-### Setup Client
+
+#### Setup Client
+
+This assumes you have returned to the root of the `nucypher-hackathon` project
 
 ```sh
 cd client
 cp .env.example .env
 ```
 
-Paste the url created by ngrok in the field called `REACT_APP_PEER_SERVER_HOST`
+Paste the url created by ngrok in the field called `REACT_APP_PEER_SERVER_HOST`. You can leave the rest of the parameters as default.
 
 ```sh
 npm run start
 ```
 
+### Running
+
 Navigate to localhost:3000
-
-### Fire up Nucypher nodes
-
-Clone my [fork](https://github.com/drdgvhbh/nucypher/tree/hackathon) of the Nucypher repo using the hackathon branch
-
-```sh
-git clone https://github.com/drdgvhbh/nucypher.git
-cd nucypher
-git checkout hackathon
-pipenv install
-pipenv shell # You should be in a python shell now
-pip3 install .
-```
-
-Now nucypher is installed on your computer run an ursula node.
-
-```sh
-nucypher ursula run --dev --federated-only
-```
-
-### Return to your browser
 
 You should now have the peer server, web client, and nucypher Ursula node running.
 
-On `localhost:3000` click on `Try as Alice/Enrico`.
+You'll now get to choose to be Alice or Bob. For the purposes of peer to peer communicate. Simply open another tab and choose the other respective character. From the browser's point of view, both your tabs will be considered peers, even though you're on the same computer of course.
 
-Follow the first step
+### Technical Specification
 
-When you rest the second step, use the following for the input fields respectively, `a29a436b36842f7ac1c3142be1cd45a6a408119b964eba4c9ad05b92c947d41c`, `40257950741098673124746788164450033172117631348671523857112930943788887933677`.
-
-Continue following the steps.
-
-In a new incognito browser, open the webpage and choose `Try as Bob`. Somewhere in your `Alice` web browser console, you should see an identifer somewhere. i.e. `3xvue5rwv3d00000`. In Bob's browser paste this ID in the connect box and connect bob.
-
-## What still needs to be done?
-
-I am currently working on managing the peer-to-peer connection to be authenticated using nucypher.
-
-We still need to actually upload the document to swarm... right now I'm just pulling a hardcoded document I uploaded on swarm to test... hence why I told you to input that private key and document identifier. 
-
-Were using erebos to communicate with swarm.... https://erebos.js.org/docs/examples-feeds
-most of the working is already done... check `client/store/document/epics.ts` for where most of the action happens...
+TODO
